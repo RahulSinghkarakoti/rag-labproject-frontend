@@ -1,0 +1,19 @@
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies and generated output
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+
+# Local tooling and caches
+.agents/
+.codex/
+graphify-out/
+*.tsbuildinfo
+.DS_Store
