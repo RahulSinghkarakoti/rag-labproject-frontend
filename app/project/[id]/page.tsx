@@ -6,22 +6,19 @@ import { DocumentsPanel } from "@/components/project/documents-panel";
 import { ProjectChat } from "@/components/project/project-chat";
 import { RagSettingsPanel } from "@/components/project/rag-settings-panel";
 import { ThreadPanel } from "@/components/project/thread-panel";
-import { useDocumentStore, useKnowledgeBaseStore } from "@/lib/store";
+import { useKnowledgeBaseStore } from "@/lib/store";
 import { useThreadStore } from "@/lib/thread-store";
 import { MyRuntimeProvider } from "../../MyRuntimeProvider";
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const selectedThreadId = useThreadStore((state) => state.selectedThreadId);
-  const selectedKbId = useKnowledgeBaseStore((state) => state.selectedKnowledgeBaseId);
-  const documents = useDocumentStore((state) =>
-    Array.isArray(state?.documents) ? state.documents : []
-  );
+  const knowledgeBases = useKnowledgeBaseStore((state) => state.knowledgeBases);
   const fetchThreads = useThreadStore((state) => state.fetchThreads);
   const [leftTab, setLeftTab] = useState<"documents" | "threads">("documents");
   const projectName = id.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
   const chatEnabled = Boolean(selectedThreadId);
-  const canCreateThread = Boolean(selectedKbId && documents.length > 0);
+  const canCreateThread = knowledgeBases.some((kb) => kb.document_count > 0);
 
   useEffect(() => { void fetchThreads(id); }, [fetchThreads, id]);
 

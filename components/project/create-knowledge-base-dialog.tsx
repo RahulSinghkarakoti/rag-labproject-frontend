@@ -34,7 +34,7 @@ export function CreateKnowledgeBaseDialog({
   open,
   onOpenChange,
 }: CreateKnowledgeBaseDialogProps) {
-  const [activeTab, setActiveTab] = useState<"general" | "chunking" | "retrieval">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "chunking">("general");
   const createKnowledgeBase = useKnowledgeBaseStore((state) => state.createKnowledgeBase);
   const isSaving = useKnowledgeBaseStore((state) => state.status === "saving");
 
@@ -99,18 +99,7 @@ export function CreateKnowledgeBaseDialog({
               }`}
             >
               <Layers className="size-3.5" /> Chunking & Embedding
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("retrieval")}
-              className={`flex items-center gap-1.5 border-b-2 px-3 py-2 transition-colors ${
-                activeTab === "retrieval"
-                  ? "border-primary text-primary font-semibold"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Sliders className="size-3.5" /> Retrieval
-            </button>
+            </button> 
           </div>
         </DialogHeader>
 
@@ -221,10 +210,8 @@ export function CreateKnowledgeBaseDialog({
                 <select
                   {...register("embedding_config.model")}
                   className="mt-1.5 h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus:ring-2 focus:ring-ring/40"
-                >
-                  <option value="text-embedding-3-small">OpenAI text-embedding-3-small (1536d)</option>
-                  <option value="text-embedding-3-large">OpenAI text-embedding-3-large (3072d)</option>
-                  <option value="bge-large-en-v1.5">BAAI bge-large-en-v1.5 (1024d)</option>
+                > 
+                  <option value="BAAI/bge-large-en-v1.5">BAAI bge-large-en-v1.5 (1024d)</option>
                   <option value="all-MiniLM-L6-v2">all-MiniLM-L6-v2 (384d)</option>
                 </select>
                 {errors.embedding_config?.model && (
@@ -236,73 +223,7 @@ export function CreateKnowledgeBaseDialog({
             </div>
           )}
 
-          {activeTab === "retrieval" && (
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs font-medium text-foreground">
-                  Retriever Type
-                </label>
-                <select
-                  {...register("indexing_config.retriever")}
-                  className="mt-1.5 h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus:ring-2 focus:ring-ring/40"
-                >
-                  <option value="similarity">Vector Similarity Search</option>
-                  <option value="mmr">Maximal Marginal Relevance (MMR)</option>
-                  <option value="similarity-score-threshold">Similarity Score Threshold</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-medium text-foreground">Top K Documents</label>
-                  <Input
-                    type="number"
-                    {...register("indexing_config.top_k")}
-                    className="mt-1.5 h-9 text-xs"
-                  />
-                  {errors.indexing_config?.top_k && (
-                    <p className="mt-1 text-xs text-destructive">
-                      {errors.indexing_config.top_k.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-foreground">
-                    Similarity Threshold
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.05"
-                    min="0"
-                    max="1"
-                    {...register("indexing_config.similarity_threshold")}
-                    className="mt-1.5 h-9 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2 border-t pt-4">
-                <label className="flex cursor-pointer items-center justify-between text-xs">
-                  <span>Rerank retrieved results</span>
-                  <input
-                    type="checkbox"
-                    {...register("indexing_config.reranking")}
-                    className="size-4 accent-primary"
-                  />
-                </label>
-                <label className="flex cursor-pointer items-center justify-between text-xs">
-                  <span>Extract source citations</span>
-                  <input
-                    type="checkbox"
-                    {...register("indexing_config.citations")}
-                    className="size-4 accent-primary"
-                  />
-                </label>
-              </div>
-            </div>
-          )}
-
+          
           <DialogFooter className="border-t pt-3 -mx-6 px-6 -mb-4 pb-4">
             <Button
               type="button"

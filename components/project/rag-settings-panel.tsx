@@ -5,7 +5,9 @@ import {
   Brain,
   ChevronDown,
   Database,
+  FileText,
   Filter,
+  Info,
   Maximize2,
   Minimize2,
   RotateCcw,
@@ -20,7 +22,22 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { getThreadConfig } from "@/lib/thread-api";
+import { api } from "@/lib/api";
 import { useThreadStore } from "@/lib/thread-store";
 import {
   defaultProjectConfig,
@@ -28,6 +45,7 @@ import {
   useKnowledgeBaseStore,
   useThreadConfigStore,
   type ProjectConfig,
+  type DocumentItem,
 } from "@/lib/store";
 import type {
   GenerationConfig,
@@ -77,16 +95,14 @@ const QUERY_TRANSFORMATION_MODES: {
   ];
 
 const MODEL_OPTIONS: Record<LLMProvider, { value: string; label: string }[]> = {
-  openai: [
-    { value: "gpt-4o", label: "GPT-4o" },
-    { value: "gpt-4o-mini", label: "GPT-4o Mini" },
-    { value: "gpt-4-turbo", label: "GPT-4 Turbo" },
-    { value: "o1-mini", label: "o1 Mini" },
-    { value: "o3-mini", label: "o3 Mini" },
-  ],
+  // openai: [
+  //   { value: "gpt-4o", label: "GPT-4o" },
+  //   { value: "gpt-4o-mini", label: "GPT-4o Mini" },
+  //   { value: "gpt-4-turbo", label: "GPT-4 Turbo" },
+  //   { value: "o1-mini", label: "o1 Mini" },
+  //   { value: "o3-mini", label: "o3 Mini" },
+  // ],
   groq: [
-    { value: "llama-3.3-70b-versatile", label: "Llama 3.3 70B Versatile" },
-    { value: "llama-3.1-8b-instant", label: "Llama 3.1 8B Instant" },
     { value: "openai/gpt-oss-120b", label: "GPT-OSS 120B" },
     { value: "openai/gpt-oss-20b", label: "GPT-OSS 20B" },
     { value: "whisper-large-v3", label: "Whisper Large V3" },
@@ -118,6 +134,60 @@ const DENSE_MODELS = [
   { value: "all-MiniLM-L6-v2", label: "all-MiniLM-L6-v2" },
 ];
 
+type FieldInfo = {
+  description: string;
+  whenToUse: string;
+};
+
+function FieldInfoButton({ label, info }: { label: string; info?: FieldInfo }) {
+  if (!info) return null;
+
+  return (
+    <Dialog>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label={`Learn about ${label}`}
+                className="size-5 rounded-full text-muted-foreground hover:text-foreground"
+              >
+                <Info className="size-3" />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="top">Learn about {label}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{label}</DialogTitle>
+          <DialogDescription>{info.description}</DialogDescription>
+        </DialogHeader>
+        <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">When to use: </span>
+          {info.whenToUse}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function FieldLabel({ label, hint, info }: { label: string; hint?: string; info?: FieldInfo }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-0.5">
+        <span>{label}</span>
+        <FieldInfoButton label={label} info={info} />
+      </div>
+      {hint && <span className="text-[10px] font-normal text-muted-foreground/75">{hint}</span>}
+    </div>
+  );
+}
+
 const RERANKER_MODELS = [
   { value: "BAAI/bge-reranker-base", label: "BAAI/bge-reranker-base" },
   { value: "bge-reranker-large", label: "bge-reranker-large" },
@@ -129,20 +199,20 @@ function SelectField({
   options,
   onChange,
   hint,
+  info,
 }: {
   label: string;
   value: string;
   options: { value: string; label: string }[];
   onChange: (value: string) => void;
   hint?: string;
+  info?: FieldInfo;
 }) {
   return (
-    <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
-      <div className="flex items-center justify-between">
-        <span>{label}</span>
-        {hint && <span className="text-[10px] font-normal text-muted-foreground/75">{hint}</span>}
-      </div>
+    <div className="grid gap-1.5 text-xs font-medium text-muted-foreground">
+      <FieldLabel label={label} hint={hint} info={info} />
       <select
+        aria-label={label}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs font-normal text-foreground outline-none transition-colors focus:ring-2 focus:ring-ring/40"
@@ -153,7 +223,7 @@ function SelectField({
           </option>
         ))}
       </select>
-    </label>
+    </div>
   );
 }
 
@@ -165,6 +235,7 @@ function NumberField({
   step = 1,
   onChange,
   hint,
+  info,
 }: {
   label: string;
   value: number;
@@ -173,14 +244,13 @@ function NumberField({
   step?: number;
   onChange: (value: number) => void;
   hint?: string;
+  info?: FieldInfo;
 }) {
   return (
-    <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
-      <div className="flex items-center justify-between">
-        <span>{label}</span>
-        {hint && <span className="text-[10px] font-normal text-muted-foreground/75">{hint}</span>}
-      </div>
+    <div className="grid gap-1.5 text-xs font-medium text-muted-foreground">
+      <FieldLabel label={label} hint={hint} info={info} />
       <Input
+        aria-label={label}
         type="number"
         min={min}
         max={max}
@@ -193,7 +263,7 @@ function NumberField({
         }}
         className="h-8 bg-background text-xs"
       />
-    </label>
+    </div>
   );
 }
 
@@ -202,25 +272,31 @@ function ToggleRow({
   checked,
   onChange,
   description,
+  info,
 }: {
   label: string;
   checked: boolean;
   onChange: (value: boolean) => void;
   description?: string;
+  info?: FieldInfo;
 }) {
   return (
-    <label className="flex cursor-pointer items-start justify-between gap-3 text-xs">
+    <div className="flex items-start justify-between gap-3 text-xs">
       <div className="grid gap-0.5">
-        <span className="font-medium text-foreground">{label}</span>
+        <span className="flex items-center font-medium text-foreground">
+          {label}
+          <FieldInfoButton label={label} info={info} />
+        </span>
         {description && <span className="text-[11px] text-muted-foreground">{description}</span>}
       </div>
       <input
+        aria-label={label}
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
         className="mt-0.5 size-4 accent-primary"
       />
-    </label>
+    </div>
   );
 }
 
@@ -298,6 +374,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
 
   // Expandable accordions state for each config category
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    knowledge_bases: false,
     query_transformation: false,
     retrieval: false,
     reranking: false,
@@ -307,6 +384,36 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
   const toggleSection = (key: string) => {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
+
+  const [threadDocuments, setThreadDocuments] = useState<Record<string, DocumentItem[]>>({});
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!openSections.knowledge_bases || !thread?.knowledge_bases?.length) return;
+    let cancelled = false;
+    setThreadDocuments({});
+    setDocumentsLoading(true);
+    Promise.all(
+      thread.knowledge_bases.map(async (kb) => {
+        const documents = await api.get<DocumentItem[]>(
+          `/api/projects/${thread.project_id}/knowledge-bases/${kb.id}/documents`,
+        );
+        return [kb.id, Array.isArray(documents) ? documents : []] as const;
+      }),
+    )
+      .then((entries) => {
+        if (!cancelled) setThreadDocuments(Object.fromEntries(entries));
+      })
+      .catch(() => {
+        if (!cancelled) setThreadDocuments({});
+      })
+      .finally(() => {
+        if (!cancelled) setDocumentsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [openSections.knowledge_bases, thread]);
 
   useEffect(() => {
     if (!threadId) return;
@@ -348,7 +455,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
   };
 
   const currentProvider: LLMProvider = values.generation.provider || "openai";
-  const availableModels = MODEL_OPTIONS[currentProvider] || MODEL_OPTIONS.openai;
+  const availableModels = MODEL_OPTIONS[currentProvider] || MODEL_OPTIONS.groq;
   const currentModeInfo = QUERY_TRANSFORMATION_MODES.find(
     (m) => m.value === values.query_transformation.mode
   );
@@ -411,21 +518,47 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
             All updates sync strictly to thread metadata.
           </p>
         </div>
-
-        <div className="space-y-1.5 rounded-lg border bg-background/60 p-3 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-xs font-semibold">
-              <Database className="size-3.5 text-primary" />
-              <span className="truncate">{activeKb ? activeKb.name : "No KB Selected"}</span>
+ 
+        <SectionAccordion
+          title="Knowledge bases"
+          badge={`${thread?.knowledge_bases?.length ?? 0}`}
+          icon={<Database className="size-3.5" />}
+          isOpen={openSections.knowledge_bases}
+          onToggle={() => toggleSection("knowledge_bases")}
+        >
+          {!thread?.knowledge_bases?.length ? (
+            <p className="text-[11px] text-muted-foreground">No knowledge bases attached to this thread.</p>
+          ) : documentsLoading ? (
+            <p className="text-[11px] text-muted-foreground">Loading documents…</p>
+          ) : (
+            <div className="space-y-2">
+              {thread.knowledge_bases.map((kb) => {
+                const kbDocuments = threadDocuments[kb.id] ?? [];
+                return (
+                  <div key={kb.id} className="rounded-md border bg-background px-2.5 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-xs font-semibold">{kb.name}</span>
+                      <span className="shrink-0 text-[10px] text-muted-foreground">{kbDocuments.length} docs</span>
+                    </div>
+                    {kbDocuments.length ? (
+                      <div className="mt-1.5 space-y-1 border-t pt-1.5">
+                        {kbDocuments.map((document) => (
+                          <div key={document.id} className="flex min-w-0 items-center gap-1.5 text-[10px] text-muted-foreground">
+                            <FileText className="size-3 shrink-0" />
+                            <span className="truncate">{document.name}</span>
+                            <span className="ml-auto shrink-0">{document.status}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-[10px] text-muted-foreground">No documents</p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-              {selectedDocumentIds?.length ?? 0} / {documents?.length ?? 0} sources active
-            </span>
-          </div>
-          <p className="line-clamp-2 text-[11px] text-muted-foreground">
-            {activeKb?.description || "Select or create a knowledge base to populate pipeline specs."}
-          </p>
-        </div>
+          )}
+        </SectionAccordion>
 
         {documents?.length > 0 ? (
           <div className="space-y-3">
@@ -444,6 +577,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   value: m.value,
                   label: m.label,
                 }))}
+                info={{ description: "Chooses how the user's question is prepared before retrieval.", whenToUse: "Keep None for straightforward questions; use Rewrite for follow-ups, HyDE or Multi-Query when recall is more important than latency, and Step-Back or Sub-Queries for complex questions." }}
                 onChange={(mode) =>
                   updateSection("query_transformation", {
                     mode: mode as QueryTransformationMode,
@@ -462,6 +596,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                 min={1}
                 max={10}
                 hint="1 - 10"
+                info={{ description: "The number of transformed queries generated for one user question.", whenToUse: "Increase it when one wording misses relevant documents; leave it low for faster, cheaper retrieval." }}
                 onChange={(query_count) =>
                   updateSection("query_transformation", {
                     query_count: Math.min(10, Math.max(1, query_count)),
@@ -472,20 +607,22 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
               <ToggleRow
                 label="Include original query"
                 description="Include the raw user query alongside generated queries"
+                info={{ description: "Keeps the original question in the retrieval set in addition to transformed queries.", whenToUse: "Enable it when transformations may lose exact names, identifiers, or wording." }}
                 checked={values.query_transformation.include_original}
                 onChange={(include_original) =>
                   updateSection("query_transformation", { include_original })
                 }
               />
 
-              <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
+              <div className="grid gap-1.5 text-xs font-medium text-muted-foreground">
                 <div className="flex items-center justify-between">
-                  <span>Custom prompt template</span>
+                  <span className="flex items-center">Custom prompt template<FieldInfoButton label="Custom prompt template" info={{ description: "An optional instruction used to customize query transformation. The template can use the query and count placeholders.", whenToUse: "Use it only when the built-in transformation behavior does not match your domain or question style." }} /></span>
                   <span className="text-[10px] font-normal text-muted-foreground/75">
                     Optional
                   </span>
                 </div>
                 <Textarea
+                  aria-label="Custom prompt template"
                   value={values.query_transformation.prompt_template ?? ""}
                   placeholder="e.g. Rewrite this query: {query} for count: {count}"
                   onChange={(event) => {
@@ -496,7 +633,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   }}
                   className="min-h-16 text-xs font-mono"
                 />
-              </label>
+              </div>
             </SectionAccordion>
 
             {/* 2. RETRIEVAL */}
@@ -511,6 +648,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                 label="Strategy"
                 value={values.retrieval.strategy}
                 options={RETRIEVAL_STRATEGIES}
+                info={{ description: "Selects the search method used to find candidate passages.", whenToUse: "Use Hybrid for a balance of keyword and semantic matching, Dense for meaning-based search, Sparse for exact terms, or MMR for more diverse results." }}
                 onChange={(strategy) =>
                   updateSection("retrieval", { strategy: strategy as RetrievalStrategy })
                 }
@@ -524,6 +662,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   max={1.0}
                   step={0.05}
                   hint="0.0 - 1.0"
+                  info={{ description: "Balances sparse keyword search against dense embedding search. 0 is sparse; 1 is dense.", whenToUse: "Raise it for conceptual questions; lower it when exact terms, IDs, or names matter." }}
                   onChange={(alpha) =>
                     updateSection("retrieval", {
                       alpha: Math.min(1.0, Math.max(0.0, alpha)),
@@ -536,6 +675,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   min={1}
                   max={100}
                   hint="1 - 100"
+                  info={{ description: "The number of passages returned to the answer pipeline after retrieval.", whenToUse: "Increase it when answers need broader context; lower it to reduce noise and latency." }}
                   onChange={(top_k) =>
                     updateSection("retrieval", {
                       top_k: Math.min(100, Math.max(1, top_k)),
@@ -548,6 +688,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   min={1}
                   max={200}
                   hint="1 - 200"
+                  info={{ description: "The number of candidates fetched before later filtering, diversity selection, or reranking.", whenToUse: "Set it higher than Top K when using MMR or reranking and you want more candidates to compare." }}
                   onChange={(fetch_k) =>
                     updateSection("retrieval", {
                       fetch_k: Math.min(200, Math.max(1, fetch_k)),
@@ -561,6 +702,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   max={1}
                   step={0.05}
                   hint="-1.0 - 1.0"
+                  info={{ description: "Excludes retrieved passages whose similarity score is below this value.", whenToUse: "Use it to remove weak matches; raise it for precision, or lower it when recall is more important." }}
                   onChange={(similarity_threshold) =>
                     updateSection("retrieval", {
                       similarity_threshold: Math.min(1, Math.max(-1, similarity_threshold)),
@@ -574,6 +716,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   max={1}
                   step={0.05}
                   hint="0.0 - 1.0"
+                  info={{ description: "Controls the MMR trade-off between relevance and diversity. 1 favors relevance; 0 favors diversity.", whenToUse: "Use it with MMR: raise it for focused answers and lower it when results are repetitive." }}
                   onChange={(mmr_lambda) =>
                     updateSection("retrieval", {
                       mmr_lambda: Math.min(1, Math.max(0, mmr_lambda)),
@@ -591,6 +734,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                 label="Sparse model"
                 value={values.retrieval.sparse_model}
                 options={SPARSE_MODELS}
+                info={{ description: "The lexical search algorithm used for sparse retrieval.", whenToUse: "Use the default BM25 for keyword, phrase, and identifier matching." }}
                 onChange={(sparse_model) =>
                   updateSection("retrieval", { sparse_model })
                 }
@@ -601,6 +745,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   label="Dense model"
                   value={values.retrieval.dense_model}
                   options={DENSE_MODELS}
+                  info={{ description: "The embedding model used to compare the meaning of queries and passages.", whenToUse: "Choose a model compatible with the knowledge base; use a larger model when semantic quality matters more than speed." }}
                   onChange={(dense_model) =>
                     updateSection("retrieval", { dense_model })
                   }
@@ -627,6 +772,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
               <ToggleRow
                 label="Enable Reranking"
                 description="Run cross-encoder to re-score retrieved passages"
+                info={{ description: "Runs a second relevance model over retrieved passages to improve their ordering.", whenToUse: "Enable it when retrieval returns plausible but poorly ordered results; disable it to reduce latency and compute." }}
                 checked={values.reranking.enabled}
                 onChange={(enabled) =>
                   updateSection("reranking", {
@@ -641,6 +787,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                     label="Reranker Model"
                     value={values.reranking.model}
                     options={RERANKER_MODELS}
+                    info={{ description: "The cross-encoder model that scores query-passage relevance.", whenToUse: "Use the base model for lower cost or the larger model when ranking quality is more important." }}
                     onChange={(model) =>
                       updateSection("reranking", { model })
                     }
@@ -661,6 +808,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                     min={1}
                     max={200}
                     hint="1 - 200"
+                    info={{ description: "The maximum number of passages kept after reranking.", whenToUse: "Increase it when the final answer needs more supporting context; keep it near Top K for concise context." }}
                     onChange={(top_n) =>
                       updateSection("reranking", {
                         top_n: Math.min(200, Math.max(1, top_n)),
@@ -675,6 +823,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                       min={1}
                       max={100}
                       hint="1 - 100"
+                      info={{ description: "The number of retrieved candidates sent into the reranker.", whenToUse: "Increase it when relevant passages are being missed, at the cost of reranking time." }}
                       onChange={(top_k) =>
                         updateSection("reranking", {
                           top_k: Math.min(100, Math.max(1, top_k)),
@@ -687,6 +836,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                       min={1}
                       max={256}
                       hint="1 - 256"
+                      info={{ description: "How many passages the reranker scores in one batch.", whenToUse: "Increase it for throughput if memory allows; lower it when the reranker uses too much memory." }}
                       onChange={(batch_size) =>
                         updateSection("reranking", {
                           batch_size: Math.min(256, Math.max(1, batch_size)),
@@ -695,14 +845,15 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                     />
                   </div>
 
-                  <label className="grid gap-1.5 text-xs font-medium text-muted-foreground">
+                  <div className="grid gap-1.5 text-xs font-medium text-muted-foreground">
                     <div className="flex items-center justify-between">
-                      <span>Score threshold</span>
+                      <span className="flex items-center">Score threshold<FieldInfoButton label="Score threshold" info={{ description: "An optional minimum reranker score; passages below it are excluded.", whenToUse: "Use it when low-quality matches should never reach generation; leave empty when score scales vary by model." }} /></span>
                       <span className="text-[10px] font-normal text-muted-foreground/75">
                         Optional
                       </span>
                     </div>
                     <Input
+                      aria-label="Score threshold"
                       type="number"
                       step="any"
                       value={values.reranking.score_threshold ?? ""}
@@ -716,11 +867,12 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                       }}
                       className="h-8 bg-background text-xs"
                     />
-                  </label>
+                  </div>
 
                   <ToggleRow
                     label="Return documents"
                     description="Include reranked documents in the pipeline result"
+                    info={{ description: "Includes the final reranked passages in the pipeline response for downstream use or inspection.", whenToUse: "Enable it when the client needs source documents; disable it to return only the generated answer." }}
                     checked={values.reranking.return_documents}
                     onChange={(return_documents) =>
                       updateSection("reranking", { return_documents })
@@ -746,6 +898,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   { value: "groq", label: "Groq" },
                   { value: "gemini", label: "Gemini" },
                 ]}
+                info={{ description: "The service that runs answer generation.", whenToUse: "Choose the provider configured for your deployment and preferred latency, cost, or model availability." }}
                 onChange={(provider) => {
                   const newProvider = provider as LLMProvider;
                   const defaultModel =
@@ -762,6 +915,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   label="Model"
                   value={values.generation.llm_model}
                   options={availableModels}
+                  info={{ description: "The language model used to write the final response.", whenToUse: "Choose a stronger model for difficult synthesis or a faster model for simple, low-latency answers." }}
                   onChange={(llm_model) =>
                     updateSection("generation", { llm_model })
                   }
@@ -784,6 +938,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   max={2.0}
                   step={0.05}
                   hint="0.0 - 2.0"
+                  info={{ description: "Controls randomness in generated text. Lower values are more consistent; higher values are more varied.", whenToUse: "Use a low value for factual RAG answers and raise it only when more creative wording is wanted." }}
                   onChange={(temperature) =>
                     updateSection("generation", {
                       temperature: Math.min(2.0, Math.max(0.0, temperature)),
@@ -797,6 +952,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   max={32000}
                   step={100}
                   hint="1 - 32,000"
+                  info={{ description: "The maximum number of tokens allowed in the generated response.", whenToUse: "Increase it for long answers; keep it lower to control cost and prevent unnecessarily verbose output." }}
                   onChange={(max_tokens) =>
                     updateSection("generation", {
                       max_tokens: Math.min(32000, Math.max(1, max_tokens)),
@@ -808,6 +964,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
               <ToggleRow
                 label="Stream Response"
                 description="Stream tokens live during answer generation"
+                info={{ description: "Sends generated text to the interface as it is produced instead of waiting for completion.", whenToUse: "Enable it for a more responsive chat experience; disable it when a complete response is required before display." }}
                 checked={values.generation.stream}
                 onChange={(stream) =>
                   updateSection("generation", { stream })
@@ -817,6 +974,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
               <ToggleRow
                 label="Enforce Citations"
                 description="Require grounded citations in the generated response"
+                info={{ description: "Requires the answer to include citations grounded in retrieved source material.", whenToUse: "Enable it when traceability matters; keep it off when citations are not supported by the selected pipeline." }}
                 checked={values.generation.citation_enforced}
                 onChange={(citation_enforced) =>
                   updateSection("generation", { citation_enforced })

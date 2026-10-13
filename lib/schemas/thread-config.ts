@@ -9,7 +9,9 @@ export const queryTransformationModeSchema = z.enum([
   "sub_queries",
 ]);
 
-export const llmProviderSchema = z.enum(["openai", "groq", "gemini"]);
+export const llmProviderSchema = z.enum([
+  // "openai",
+   "groq", "gemini"]);
 
 export const retrievalStrategySchema = z.enum(["hybrid", "dense", "sparse", "mmr"]);
 

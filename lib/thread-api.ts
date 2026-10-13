@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
 import type { ThreadConfig } from "@/lib/config-store";
+import type { KnowledgeBase } from "@/lib/store";
 import { threadConfigSchema } from "@/lib/schemas/thread-config";
 
 type ThreadMetadata = Partial<ThreadConfig> & {
@@ -15,6 +16,7 @@ export type Thread = {
   title: string | null;
   status: string;
   metadata?: ThreadMetadata;
+  knowledge_bases?: KnowledgeBase[];
   created_at?: string;
   updated_at?: string;
 };

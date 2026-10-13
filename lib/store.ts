@@ -55,7 +55,7 @@ export type CreateKnowledgeBaseInput = {
   description?: string;
   chunking_config: ChunkingConfig;
   embedding_config: EmbeddingConfig;
-  indexing_config: IndexingConfig;
+  // indexing_config: IndexingConfig;
 };
 
 export type DocumentItem = {

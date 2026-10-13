@@ -46,7 +46,7 @@ export const createKnowledgeBaseSchema = z.object({
     .default(""),
   chunking_config: chunkingConfigSchema,
   embedding_config: embeddingConfigSchema,
-  indexing_config: indexingConfigSchema,
+  // indexing_config: indexingConfigSchema,
 });
 
 export type CreateKnowledgeBaseFormValues = z.infer<
@@ -62,14 +62,7 @@ export const defaultKnowledgeBaseFormValues: CreateKnowledgeBaseFormValues = {
     chunk_overlap: 200,
   },
   embedding_config: {
-    model: "text-embedding-3-small",
-    dimension: 1536,
-  },
-  indexing_config: {
-    retriever: "similarity",
-    top_k: 5,
-    similarity_threshold: 0.7,
-    reranking: true,
-    citations: true,
-  },
+    model: "bge-large-en-v1.5",
+    dimension: 1024,
+  }
 };
