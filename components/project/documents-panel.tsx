@@ -35,6 +35,8 @@ function formatBytes(bytes?: number | null): string {
 export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCreateKbOpen, setIsCreateKbOpen] = useState(false);
+  const trackedDocumentIdsRef = useRef(new Set<string>());
+  const previousSseStatusRef = useRef<string>("DISCONNECTED");
 
   const knowledgeBases = useKnowledgeBaseStore((state) => state.knowledgeBases);
   const selectedKbId = useKnowledgeBaseStore((state) => state.selectedKnowledgeBaseId);
@@ -44,6 +46,8 @@ export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) 
   const documents = useDocumentStore((state) =>
     Array.isArray(state?.documents) ? state.documents : []
   );
+  const documentsRef = useRef(documents);
+  documentsRef.current = documents;
   const selectedDocumentIds = useDocumentStore((state) =>
     Array.isArray(state?.selectedDocumentIds) ? state.selectedDocumentIds : []
   );
@@ -61,24 +65,56 @@ export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) 
     []
   );
 
-  const { data: sseEvent } = useSSE<{
+  const { data: sseEvent, status: sseStatus, reconnect: reconnectSse, disconnect: disconnectSse } = useSSE<{
     document_id?: string;
     status?: string;
     filename?: string;
     message?: string;
+    error?: string;
+    embedded_count?: number;
+    total_chunks?: number;
   }>({
-    url: "http://localhost:8000/api/v1/sse/stream",
+    url: `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/api/v1/sse/stream`,
     eventNames,
   });
-
-  console.log("SSE Event:", sseEvent);
 
   useEffect(() => {
     if (!sseEvent?.document_id || !sseEvent?.status) {
       return;
     }
-    applySSEStatusUpdate(sseEvent.document_id, sseEvent.status);
-  }, [sseEvent, applySSEStatusUpdate]);
+    const isKnownDocument = documentsRef.current.some((doc) => doc.id === sseEvent.document_id);
+    const isTrackedUpload = trackedDocumentIdsRef.current.has(sseEvent.document_id);
+    if (!isKnownDocument && !isTrackedUpload) return;
+
+    applySSEStatusUpdate(sseEvent.document_id, {
+      status: sseEvent.status,
+      error: sseEvent.error ?? null,
+      embedded_count: sseEvent.embedded_count,
+      total_chunks: sseEvent.total_chunks,
+    });
+
+    if (sseEvent.status === "completed" || sseEvent.status === "failed") {
+      if (isTrackedUpload) {
+        trackedDocumentIdsRef.current.delete(sseEvent.document_id);
+        if (selectedKbId) void fetchDocuments(projectId, selectedKbId);
+        if (trackedDocumentIdsRef.current.size === 0) disconnectSse();
+      }
+    }
+  }, [sseEvent, applySSEStatusUpdate, fetchDocuments, projectId, selectedKbId, disconnectSse]);
+
+  useEffect(() => {
+    if (previousSseStatusRef.current === "CONNECTED" && sseStatus === "DISCONNECTED" && selectedKbId && trackedDocumentIdsRef.current.size > 0) {
+      void fetchDocuments(projectId, selectedKbId).then((docs) => {
+        for (const document of docs) {
+          if ((document.status === "completed" || document.status === "failed") && trackedDocumentIdsRef.current.has(document.id)) {
+            trackedDocumentIdsRef.current.delete(document.id);
+          }
+        }
+        if (trackedDocumentIdsRef.current.size === 0) disconnectSse();
+      });
+    }
+    previousSseStatusRef.current = sseStatus;
+  }, [sseStatus, projectId, selectedKbId, fetchDocuments]);
 
   useEffect(() => {
     if (projectId) {
@@ -97,7 +133,16 @@ export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) 
     if (!files || files.length === 0 || !selectedKbId) return;
 
     try {
-      await uploadDocuments(projectId, selectedKbId, Array.from(files));
+      reconnectSse();
+      const uploadedDocuments = await uploadDocuments(projectId, selectedKbId, Array.from(files));
+      for (const document of uploadedDocuments) trackedDocumentIdsRef.current.add(document.id);
+      const refreshedDocuments = await fetchDocuments(projectId, selectedKbId);
+      for (const document of refreshedDocuments) {
+        if ((document.status === "completed" || document.status === "failed") && trackedDocumentIdsRef.current.has(document.id)) {
+          trackedDocumentIdsRef.current.delete(document.id);
+        }
+      }
+      if (trackedDocumentIdsRef.current.size === 0) disconnectSse();
     } finally {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -233,14 +278,15 @@ export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) 
               const isReady = isDocumentReady(doc.status);
               const isSelected = selectedDocumentIds.includes(doc.id);
               const extension = doc.name.split(".").pop()?.toUpperCase() ?? "DOC";
+              const normalizedStatus = doc.status?.toLowerCase();
               const statusClass =
-                doc.status?.toLowerCase() === "completed" || doc.status?.toLowerCase() === "ready"
+                normalizedStatus === "completed" || normalizedStatus === "ready"
                   ? "text-emerald-600 font-medium"
-                  : doc.status?.toLowerCase() === "processing" || doc.status?.toLowerCase() === "queued" || doc.status?.toLowerCase() === "uploaded"
+                  : normalizedStatus === "failed"
+                    ? "text-red-500 font-medium"
+                    : ["uploaded", "queued", "processing", "loading", "loaded", "chunking", "chunked", "embedding", "embedded", "storing", "stored"].includes(normalizedStatus ?? "")
                     ? "text-amber-500 font-medium"
-                    : doc.status?.toLowerCase() === "failed"
-                      ? "text-red-500 font-medium"
-                      : "text-muted-foreground";
+                    : "text-muted-foreground";
 
               return (
                 <div
@@ -285,6 +331,16 @@ export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) 
                         {doc.status ?? "queued"}
                       </span>
                     </div>
+                    {normalizedStatus === "embedding" && doc.total_chunks ? (
+                      <div className="mt-0.5 text-[10px] text-muted-foreground">
+                        Embedding {Math.min(doc.embedded_count ?? 0, doc.total_chunks)} / {doc.total_chunks}
+                      </div>
+                    ) : null}
+                    {normalizedStatus === "failed" && doc.error ? (
+                      <div className="mt-0.5 truncate text-[10px] text-destructive" title={doc.error}>
+                        {doc.error}
+                      </div>
+                    ) : null}
                   </div>
 
                   <button

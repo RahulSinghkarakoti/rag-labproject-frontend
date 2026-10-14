@@ -26,7 +26,7 @@ export type ChunkingConfig = {
 
 export type EmbeddingConfig = {
   model: string;
-  dimension?: number;
+  // dimension?: number;
 };
 
 export type IndexingConfig = {
@@ -67,6 +67,9 @@ export type DocumentItem = {
   status: string;
   checksum?: string | null;
   chunk_count?: number;
+  embedded_count?: number;
+  total_chunks?: number;
+  error?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -111,7 +114,7 @@ type DocumentStore = {
   fetchDocuments: (projectId: string, kbId: string) => Promise<DocumentItem[]>;
   uploadDocuments: (projectId: string, kbId: string, files: File[]) => Promise<DocumentItem[]>;
   deleteDocument: (projectId: string, kbId: string, docId: string) => Promise<void>;
-  applySSEStatusUpdate: (documentId: string, status: string) => void;
+  applySSEStatusUpdate: (documentId: string, update: Pick<DocumentItem, "status" | "embedded_count" | "total_chunks" | "error">) => void;
   toggleSelectDocument: (docId: string) => void;
   selectAllDocuments: (selectAll: boolean) => void;
   clearDocuments: () => void;
@@ -324,11 +327,23 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     }
   },
 
-  applySSEStatusUpdate: (documentId: string, status: string) => {
+  applySSEStatusUpdate: (documentId: string, update) => {
     set((state) => {
-      console.log(`SSE update for document ${documentId}: ${status}`);
+      const order = ["uploaded", "queued", "processing", "loading", "loaded", "chunking", "chunked", "embedding", "embedded", "storing", "stored", "completed", "failed"];
+      const current = state.documents.find((doc) => doc.id === documentId);
+      if (!current) return state;
+      const currentRank = order.indexOf(current.status.toLowerCase());
+      const nextRank = order.indexOf(update.status.toLowerCase());
+      if ((current.status.toLowerCase() === "completed" || current.status.toLowerCase() === "failed") || nextRank < currentRank) return state;
+      const mergedUpdate = {
+        ...update,
+        embedded_count:
+          update.embedded_count === undefined
+            ? current.embedded_count
+            : Math.max(current.embedded_count ?? 0, update.embedded_count),
+      };
       const documents = state.documents.map((doc) =>
-        doc.id === documentId ? { ...doc, status } : doc,
+        doc.id === documentId ? { ...doc, ...mergedUpdate } : doc,
       );
       const readyIds = documents.filter((doc) => isDocumentReady(doc.status)).map((doc) => doc.id);
       return {

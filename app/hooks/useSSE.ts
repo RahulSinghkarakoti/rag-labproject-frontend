@@ -23,9 +23,17 @@ export function useSSE<T = any>({ url, enabled = true, eventNames = ['message'] 
   const [messages, setMessages] = useState<T[]>([]);
   const [status, setStatus] = useState<SSEStatus>('DISCONNECTED');
   const eventSourceRef = useRef<EventSource | null>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stoppedRef = useRef(false);
 
   const connect = useCallback(() => {
     if (!enabled || typeof window === 'undefined') return;
+
+    stoppedRef.current = false;
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
 
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
@@ -36,7 +44,11 @@ export function useSSE<T = any>({ url, enabled = true, eventNames = ['message'] 
     eventSourceRef.current = es;
 
     const handleMessage = (event: MessageEvent) => {
-      const parsed = parseSSEPayload<T>(event.data);
+      const envelope = parseSSEPayload<{ data?: string | T }>(event.data);
+      const parsed =
+        envelope && typeof envelope === 'object' && 'data' in envelope
+          ? parseSSEPayload<T>(envelope.data as string)
+          : (envelope as T);
       setData(parsed);
       setMessages((prev) => [...prev, parsed]);
     };
@@ -53,14 +65,26 @@ export function useSSE<T = any>({ url, enabled = true, eventNames = ['message'] 
     }
 
     es.onerror = (err) => {
+      if (eventSourceRef.current !== es) return;
       console.error('SSE Connection Error:', err);
       setStatus('DISCONNECTED');
       es.close();
       eventSourceRef.current = null;
+      if (!stoppedRef.current && !retryTimerRef.current) {
+        retryTimerRef.current = setTimeout(() => {
+          retryTimerRef.current = null;
+          connect();
+        }, 1000);
+      }
     };
   }, [url, enabled, eventNames]);
 
   const disconnect = useCallback(() => {
+    stoppedRef.current = true;
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;

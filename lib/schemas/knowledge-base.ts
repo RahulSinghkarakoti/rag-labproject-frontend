@@ -19,7 +19,7 @@ export const chunkingConfigSchema = z
 
 export const embeddingConfigSchema = z.object({
   model: z.string().min(1, "Embedding model is required"),
-  dimension: z.coerce.number().optional().default(1536),
+  // dimension: z.coerce.number().optional().default(1536),
 });
 
 export const indexingConfigSchema = z.object({
@@ -62,7 +62,7 @@ export const defaultKnowledgeBaseFormValues: CreateKnowledgeBaseFormValues = {
     chunk_overlap: 200,
   },
   embedding_config: {
-    model: "bge-large-en-v1.5",
-    dimension: 1024,
+    model: "all-MiniLM-L6-v2",
+    // dimension: 1024,
   }
 };
