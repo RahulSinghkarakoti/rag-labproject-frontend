@@ -25,6 +25,7 @@ import {
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useThreadStore } from "@/lib/thread-store";
 import { cn } from "@/lib/utils";
 import {
   ActionBarMorePrimitive,
@@ -651,6 +652,14 @@ const AssistantMessage: FC = () => {
 };
 
 const AssistantActionBar: FC = () => {
+  const setPendingMessageAction = useThreadStore((state) => state.setPendingMessageAction);
+  const messageId = useAuiState((s) => {
+    const custom = s.message.metadata.custom;
+    return typeof custom?.output_message_id === "string"
+      ? custom.output_message_id
+      : s.message.id;
+  });
+
   return (
     <ActionBarPrimitive.Root
       hideWhenRunning
@@ -686,7 +695,10 @@ const AssistantActionBar: FC = () => {
         </ActionBarPrimitive.FeedbackNegative>
       </AuiIf>
       <ActionBarPrimitive.Reload asChild>
-        <TooltipIconButton tooltip="Refresh">
+        <TooltipIconButton
+          tooltip="Refresh"
+          onClick={() => setPendingMessageAction({ type: "retry", messageId })}
+        >
           <RefreshCwIcon />
         </TooltipIconButton>
       </ActionBarPrimitive.Reload>
@@ -758,6 +770,9 @@ const UserMessage: FC = () => {
 };
 
 const UserActionBar: FC = () => {
+  const setPendingMessageAction = useThreadStore((state) => state.setPendingMessageAction);
+  const messageId = useAuiState((s) => s.message.id);
+
   return (
     <ActionBarPrimitive.Root
       hideWhenRunning
@@ -765,7 +780,11 @@ const UserActionBar: FC = () => {
       className="aui-user-action-bar-root flex flex-col items-end"
     >
       <ActionBarPrimitive.Edit asChild>
-        <TooltipIconButton tooltip="Edit" className="aui-user-action-edit">
+        <TooltipIconButton
+          tooltip="Edit"
+          className="aui-user-action-edit"
+          onClick={() => setPendingMessageAction({ type: "edit", messageId })}
+        >
           <PencilIcon />
         </TooltipIconButton>
       </ActionBarPrimitive.Edit>

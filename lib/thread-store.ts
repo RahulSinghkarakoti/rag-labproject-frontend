@@ -1,14 +1,24 @@
 import { create } from "zustand";
-import { getThreadConfig, threadApi, type Thread } from "@/lib/thread-api";
+import { getThreadConfig, threadApi, type Thread, type ThreadMessage } from "@/lib/thread-api";
 import { defaultThreadConfig, useThreadConfigStore, type ThreadConfig } from "@/lib/config-store";
 import { threadConfigSchema } from "@/lib/schemas/thread-config";
 
 type ThreadStore = {
   threads: Thread[];
+  messages: Record<string, ThreadMessage[]>;
+  messagesStatus: "idle" | "loading" | "error";
+  messagesError: string | null;
   selectedThreadId: string | null;
   status: "idle" | "loading" | "saving" | "deleting" | "error";
   error: string | null;
   fetchThreads: (projectId: string) => Promise<void>;
+  fetchMessages: (threadId: string) => Promise<void>;
+  sendMessage: (threadId: string, content: string, signal?: AbortSignal) => Promise<Response>;
+  editMessage: (threadId: string, messageId: string, content: string) => Promise<unknown>;
+  retryMessage: (threadId: string, messageId: string, signal?: AbortSignal) => Promise<Response>;
+  pendingMessageAction: { type: "edit" | "retry"; messageId: string } | null;
+  setPendingMessageAction: (action: { type: "edit" | "retry"; messageId: string }) => void;
+  clearPendingMessageAction: () => void;
   createThread: (projectId: string, knowledgeBaseIds: string[], title?: string) => Promise<Thread>;
   renameThread: (threadId: string, title: string) => Promise<void>;
   deleteThread: (threadId: string) => Promise<void>;
@@ -25,11 +35,15 @@ const configTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 export const useThreadStore = create<ThreadStore>((set, get) => ({
   threads: [],
+  messages: {},
+  messagesStatus: "idle",
+  messagesError: null,
   selectedThreadId: null,
   status: "idle",
   error: null,
   latestPipelineVersions: {},
   refreshGenerations: {},
+  pendingMessageAction: null,
 
   fetchThreads: async (projectId) => {
     set({ status: "loading", error: null });
@@ -45,6 +59,29 @@ export const useThreadStore = create<ThreadStore>((set, get) => ({
       set({ status: "error", error: message(error) });
     }
   },
+
+  fetchMessages: async (threadId) => {
+    set({ messagesStatus: "loading", messagesError: null });
+    try {
+      const messages = (await threadApi.messages(threadId)) ?? [];
+      set((state) => ({
+        messages: { ...state.messages, [threadId]: messages },
+        messagesStatus: "idle",
+      }));
+    } catch (error) {
+      set({ messagesStatus: "error", messagesError: message(error) });
+      throw error;
+    }
+  },
+
+  sendMessage: (threadId, content, signal) =>
+    threadApi.sendMessage(threadId, { content, signal }),
+  editMessage: (threadId, messageId, content) =>(
+    threadApi.editMessage(threadId, messageId, content)),
+  retryMessage: (threadId, messageId, signal) =>
+    threadApi.retryMessage(threadId, messageId, signal),
+  setPendingMessageAction: (pendingMessageAction) => set({ pendingMessageAction }),
+  clearPendingMessageAction: () => set({ pendingMessageAction: null }),
 
   createThread: async (projectId, knowledgeBaseIds, title = "New thread") => {
     set({ status: "saving", error: null });
@@ -145,5 +182,5 @@ export const useThreadStore = create<ThreadStore>((set, get) => ({
       throw error;
     }
   },
-  clearError: () => set({ error: null }),
+  clearError: () => set({ error: null, messagesError: null }),
 }));

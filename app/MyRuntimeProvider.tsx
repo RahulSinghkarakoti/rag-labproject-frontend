@@ -3,15 +3,16 @@
 import {
   AssistantRuntimeProvider,
   AuiConfig,
+  ExportedMessageRepository,
   Tools,
   type ChatModelAdapter,
   type ThreadMessageLike,
   useLocalRuntime,
 } from "@assistant-ui/react";
 import type { ReactNode } from "react";
-import { getSession } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
-import { threadApi, type ThreadMessage } from "@/lib/thread-api";
+import type { ThreadMessage } from "@/lib/thread-api";
+import { useThreadStore } from "@/lib/thread-store";
 import toolkit from "./toolkit";
 
 type MyRuntimeProviderProps = {
@@ -37,6 +38,21 @@ function toThreadMessage(message: ThreadMessage): ThreadMessageLike {
   };
 }
 
+function toBranchableHistory(messages: ThreadMessage[]) {
+  let previousAssistantId: string | null = null;
+  const items = messages.map((message) => {
+    const parentId = message.parent_message_id ?? previousAssistantId;
+    if (message.role === "assistant" || message.role === "tool") {
+      previousAssistantId = message.id;
+    }
+    return { message: toThreadMessage(message), parentId };
+  });
+
+  return ExportedMessageRepository.fromBranchableArray(items, {
+    headId: messages.at(-1)?.id ?? null,
+  });
+}
+
 function RuntimeLoading({ error, onRetry }: { error: string | null; onRetry: () => void }) {
   return (
     <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
@@ -58,46 +74,27 @@ export function MyRuntimeProvider({
   children,
   threadId,
 }: MyRuntimeProviderProps) {
-  const [messages, setMessages] = useState<ThreadMessageLike[] | null>(threadId ? null : []);
-  const [error, setError] = useState<string | null>(null);
+  const threadMessages = useThreadStore((state) => (threadId ? state.messages[threadId] : undefined));
+  const messagesStatus = useThreadStore((state) => state.messagesStatus);
+  const error = useThreadStore((state) => state.messagesError);
+  const fetchMessages = useThreadStore((state) => state.fetchMessages);
   const [retry, setRetry] = useState(0);
 
   useEffect(() => {
-    let active = true;
-
     if (!threadId) {
-      setMessages([]);
-      setError(null);
-      return () => {
-        active = false;
-      };
+      return;
     }
 
-    setMessages(null);
-    setError(null);
-    void threadApi.messages(threadId)
-      .then((history) => {
-        if (!active) return;
-        setMessages(
-          [...history]
-            .sort((a, b) => a.sequence - b.sequence)
-            .map(toThreadMessage),
-        );
-      })
-      .catch((cause: unknown) => {
-        if (!active) return;
-        setError(cause instanceof Error ? cause.message : "Request failed");
-      });
-
-    return () => {
-      active = false;
-    };
+    void fetchMessages(threadId).catch(() => undefined);
   }, [retry, threadId]);
 
-  if (messages === null) {
+  if (threadId && (messagesStatus === "loading" || !threadMessages)) {
     return <RuntimeLoading error={error} onRetry={() => setRetry((value) => value + 1)} />;
   }
 
+  const messages = (threadMessages ?? [])
+    .slice()
+    .sort((a, b) => a.sequence - b.sequence)
   return <RuntimeInner threadId={threadId} messages={messages}>{children}</RuntimeInner>;
 }
 
@@ -105,7 +102,12 @@ function RuntimeInner({
   children,
   threadId,
   messages,
-}: MyRuntimeProviderProps & { messages: ThreadMessageLike[] }) {
+}: MyRuntimeProviderProps & { messages: ThreadMessage[] }) {
+  const sendMessage = useThreadStore((state) => state.sendMessage);
+  const editMessage = useThreadStore((state) => state.editMessage);
+  const retryMessage = useThreadStore((state) => state.retryMessage);
+  const clearPendingMessageAction = useThreadStore((state) => state.clearPendingMessageAction);
+
   const chatModel = useMemo<ChatModelAdapter>(() => ({
     async *run({ messages: threadMessages, abortSignal }) {
       const lastUserMessage = [...threadMessages].reverse().find((message) => message.role === "user");
@@ -115,26 +117,19 @@ function RuntimeInner({
           ?.filter((part) => part.type === "text")
           .map((part) => part.text)
           .join("\n") ?? "";
-      const session = (await getSession()) as { accessToken?: string } | null;
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/api/threads/${threadId ?? ""}/messages`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            ...(session?.accessToken
-              ? { Authorization: `Bearer ${session.accessToken}` }
-              : {}),
-          },
-          body: JSON.stringify({ content }),
-          signal: abortSignal,
-        },
-      );
-
-      if (!response.ok || !response.body) {
-        throw new Error(`Message request failed (${response.status})`);
+      if (!threadId) throw new Error("No thread selected");
+      const pendingAction = useThreadStore.getState().pendingMessageAction;
+      clearPendingMessageAction();
+      let response: Response;
+      if (pendingAction?.type === "edit") {
+        await editMessage(threadId, pendingAction.messageId, content);
+        response = await retryMessage(threadId, pendingAction.messageId, abortSignal);
+      } else if (pendingAction?.type === "retry") {
+        response = await retryMessage(threadId, pendingAction.messageId, abortSignal);
+      } else {
+        response = await sendMessage(threadId, content, abortSignal);
       }
+      if (!response.body) throw new Error("Message response has no body");
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -212,9 +207,17 @@ function RuntimeInner({
 
       if (!completed) throw new Error("Message stream ended before completion");
     },
-  }), [threadId]);
+  }), [clearPendingMessageAction, editMessage, retryMessage, sendMessage, threadId]);
 
-  const runtime = useLocalRuntime(chatModel, { initialMessages: messages });
+  const history = useMemo(() => toBranchableHistory(messages), [messages]);
+  const runtime = useLocalRuntime(chatModel, {
+    adapters: {
+      history: {
+        load: async () => history,
+        append: async () => {},
+      },
+    },
+  });
   const config = AuiConfig({
     tools: Tools({ toolkit }),
   });

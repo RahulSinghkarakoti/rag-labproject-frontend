@@ -21,6 +21,13 @@ type MarkdownTextProps = Partial<TextMessagePartProps> & {
   components?: Parameters<typeof memoizeMarkdownComponents>[0];
 };
 
+// Some persisted assistant responses omit the newline before list items, which
+// makes otherwise-valid `- **item**` / `1. **item**` syntax render as prose.
+const normalizeMarkdownLists = (text: string) =>  
+  text
+    .replace(/([^\n])\s+([-*])\s+(?=\*\*)/g, "$1\n$2 ")
+    .replace(/([^\n])\s+(\d+\.)\s+(?=\*\*)/g, "$1\n$2 ");
+
 const useShallowStable = <T extends Record<string, unknown> | undefined>(
   value: T,
 ): T => {
@@ -50,6 +57,7 @@ const MarkdownTextImpl: FC<MarkdownTextProps> = ({ components }) => {
   return (
     <MarkdownTextPrimitive
       remarkPlugins={[remarkGfm]}
+      preprocess={normalizeMarkdownLists}
       className="aui-md"
       components={markdownComponents}
       defer
