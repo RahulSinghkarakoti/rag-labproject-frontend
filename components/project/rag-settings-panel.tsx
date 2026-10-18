@@ -507,7 +507,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
       {/* Main Body */}
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {/* Pipeline & Knowledge Base Badges */}
-        <div className="rounded-lg border bg-background/60 p-3 text-xs shadow-2xs">
+        {/* <div className="rounded-lg border bg-background/60 p-3 text-xs shadow-2xs">
           <div className="flex items-center justify-between font-semibold">
             <span>Pipeline version</span>
             <span className="text-primary font-mono text-[11px]">
@@ -517,7 +517,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
           <p className="mt-1 text-[11px] text-muted-foreground">
             All updates sync strictly to thread metadata.
           </p>
-        </div>
+        </div> */}
  
         <SectionAccordion
           title="Knowledge bases"
@@ -960,16 +960,6 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   }
                 />
               </div>
-
-              <ToggleRow
-                label="Stream Response"
-                description="Stream tokens live during answer generation"
-                info={{ description: "Sends generated text to the interface as it is produced instead of waiting for completion.", whenToUse: "Enable it for a more responsive chat experience; disable it when a complete response is required before display." }}
-                checked={values.generation.stream}
-                onChange={(stream) =>
-                  updateSection("generation", { stream })
-                }
-              />
 
               <ToggleRow
                 label="Enforce Citations"

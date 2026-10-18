@@ -88,6 +88,33 @@ export type CreateThreadInput = {
   config: ThreadConfig ;
 };
 
+export type RunStep = {
+  id: string;
+  run_id: string;
+  step_type: string;
+  sequence: number;
+  status: string;
+  input?: Record<string, any> | null;
+  output?: Record<string, any> | null;
+  error?: Record<string, any> | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  metadata?: Record<string, any>;
+};
+
+export type RunDetails = {
+  id: string;
+  thread_id: string;
+  input_message_id?: string | null;
+  output_message_id?: string | null;
+  run_type: string;
+  status: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  error?: Record<string, any> | null;
+  steps: RunStep[];
+};
+
 export const threadApi = {
   list: (projectId: string) => api.get<Thread[]>(`/api/projects/${projectId}/threads`),
   messages: (threadId: string) => api.get<ThreadMessage[]>(`/api/threads/${threadId}/messages`),
@@ -113,4 +140,6 @@ export const threadApi = {
       ...(input.config ? { config: threadConfigSchema.parse(input.config) } : {}),
     }),
   remove: (threadId: string) => api.delete(`/api/threads/${threadId}`),
+  runSteps: (messageId: string) =>
+    api.get<RunDetails>(`/api/v1/messages/${messageId}/run-steps`),
 };

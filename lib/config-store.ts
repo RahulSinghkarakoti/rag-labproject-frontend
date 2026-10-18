@@ -52,7 +52,6 @@ export const defaultThreadConfig: ThreadConfig = {
     llm_model: "openai/gpt-oss-120b",
     temperature: 0.2,
     max_tokens: 1000,
-    stream: true,
     citation_enforced: false,
   },
 };

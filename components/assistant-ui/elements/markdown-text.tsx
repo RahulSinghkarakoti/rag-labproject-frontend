@@ -23,10 +23,18 @@ type MarkdownTextProps = Partial<TextMessagePartProps> & {
 
 // Some persisted assistant responses omit the newline before list items, which
 // makes otherwise-valid `- **item**` / `1. **item**` syntax render as prose.
-const normalizeMarkdownLists = (text: string) =>  
-  text
+// Also converts inline citation brackets like [1] or [1, 2] into interactive badge links.
+const preprocessMarkdown = (text: string) => {
+  const normalized = text
     .replace(/([^\n])\s+([-*])\s+(?=\*\*)/g, "$1\n$2 ")
     .replace(/([^\n])\s+(\d+\.)\s+(?=\*\*)/g, "$1\n$2 ");
+  return normalized.replace(/(?<!\[)\[(\d+(?:\s*,\s*\d+)*)\](?!\]\()/g, (_, nums) => {
+    return nums
+      .split(/\s*,\s*/)
+      .map((n: string) => `[${n}](#citation-${n})`)
+      .join(" ");
+  });
+};
 
 const useShallowStable = <T extends Record<string, unknown> | undefined>(
   value: T,
@@ -57,8 +65,8 @@ const MarkdownTextImpl: FC<MarkdownTextProps> = ({ components }) => {
   return (
     <MarkdownTextPrimitive
       remarkPlugins={[remarkGfm]}
-      preprocess={normalizeMarkdownLists}
-      className="aui-md"
+      preprocess={preprocessMarkdown}
+      className="aui-md text-sm"
       components={markdownComponents}
       defer
     />
@@ -155,15 +163,31 @@ const defaultComponents = memoizeMarkdownComponents({
       {...props}
     />
   ),
-  a: ({ className, ...props }) => (
-    <a
-      className={cn(
-        "aui-md-a text-primary hover:text-primary/80 underline underline-offset-2",
-        className,
-      )}
-      {...props}
-    />
-  ),
+  a: ({ className, href, children, ...props }) => {
+    if (href?.startsWith("#citation-")) {
+      const docNum = href.replace("#citation-", "");
+      return (
+        <a
+          href={href}
+          className="inline-flex items-center mx-0.5 px-1.5 py-0.5 align-baseline rounded text-[11px] font-mono font-semibold bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 transition-colors no-underline select-none"
+          title={`Source document ${docNum}`}
+          {...props}
+        >
+          [{children}]
+        </a>
+      );
+    }
+    return (
+      <a
+        className={cn(
+          "aui-md-a text-primary hover:text-primary/80 underline underline-offset-2",
+          className,
+        )}
+        href={href}
+        {...props}
+      />
+    );
+  },
   blockquote: ({ className, ...props }) => (
     <blockquote
       className={cn(

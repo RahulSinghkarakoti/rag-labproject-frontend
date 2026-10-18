@@ -56,7 +56,6 @@ export const generationConfigSchema = z
     // model: z.string().min(1).max(200).default("gpt-4o"),
     temperature: z.number().min(0.0).max(2.0).default(0.2),
     max_tokens: z.number().int().min(1).max(32000).default(1000),
-    stream: z.boolean().default(true),
     citation_enforced: z.boolean().default(false),
   })
   .strict();

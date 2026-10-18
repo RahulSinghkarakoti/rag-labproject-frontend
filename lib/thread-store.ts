@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getThreadConfig, threadApi, type Thread, type ThreadMessage } from "@/lib/thread-api";
+import { getThreadConfig, threadApi, type Thread, type ThreadMessage, type RunDetails } from "@/lib/thread-api";
 import { defaultThreadConfig, useThreadConfigStore, type ThreadConfig } from "@/lib/config-store";
 import { threadConfigSchema } from "@/lib/schemas/thread-config";
 
@@ -13,6 +13,7 @@ type ThreadStore = {
   error: string | null;
   fetchThreads: (projectId: string) => Promise<void>;
   fetchMessages: (threadId: string) => Promise<void>;
+  fetchRunSteps: (messageId: string) => Promise<RunDetails>;
   sendMessage: (threadId: string, content: string, signal?: AbortSignal) => Promise<Response>;
   editMessage: (threadId: string, messageId: string, content: string) => Promise<unknown>;
   retryMessage: (threadId: string, messageId: string, signal?: AbortSignal) => Promise<Response>;
@@ -73,6 +74,8 @@ export const useThreadStore = create<ThreadStore>((set, get) => ({
       throw error;
     }
   },
+
+  fetchRunSteps: (messageId) => threadApi.runSteps(messageId),
 
   sendMessage: (threadId, content, signal) =>
     threadApi.sendMessage(threadId, { content, signal }),
