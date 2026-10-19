@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
-import { ArrowUpRight, LogOut, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowUpRight, LogOut, MoreVertical, Pencil, Plus, Trash2, Terminal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ThemeAccentSelector } from "@/components/theme-accent-selector";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +25,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useProjectStore } from "@/lib/store";
-import SSENotifier from "@/components/SSENotifier";
 
 type Project = {
   id: string;
@@ -89,24 +89,29 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-svh bg-muted/30">
+    <main className="min-h-svh bg-[#0a0a0f] text-[#e0e0e0] font-mono">
       <div className="mx-auto max-w-6xl px-6 py-10 sm:px-10 sm:py-16">
-        <header className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+        <header className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between border-b border-[#2a2a3a] pb-6">
           <div>
-            <p className="mb-2 text-sm font-medium text-muted-foreground">RAG Lab</p>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              Your projects
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-block size-2 bg-accent animate-pulse"></span>
+              <p className="text-xs font-semibold tracking-widest text-accent uppercase">
+                &gt; LAB.WORKSPACE // ACTIVE_NODES
+              </p>
+            </div>
+            <h1 className="text-3xl font-black uppercase tracking-wider text-foreground sm:text-4xl">
+              SYSTEM PROJECTS
             </h1>
-            <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-              Create a project to organize your documents and chat with your knowledge
-              base.
+            <p className="mt-2 max-w-xl text-xs text-muted-foreground">
+              Select or deploy a workspace node to index documents and engage knowledge bases.
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <ThemeAccentSelector />
             <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut />
-              Logout
+              <LogOut className="size-3.5" />
+              LOGOUT
             </Button>
 
             <Dialog
@@ -122,43 +127,43 @@ export default function Home() {
             >
               <DialogTrigger asChild>
                 <Button size="sm">
-                  <Plus />
-                  {editProjectId ? "Update" : "New"} project
+                  <Plus className="size-3.5" />
+                  {editProjectId ? "UPDATE" : "NEW"} PROJECT
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>
-                    {editProjectId ? "Update project" : "Add new project"}
+                  <DialogTitle className="uppercase tracking-wider text-accent text-base">
+                    &gt; {editProjectId ? "UPDATE_NODE" : "NEW_PROJECT_NODE"}
                   </DialogTitle>
-                  <DialogDescription>
-                    Give your project a name and a short description.
+                  <DialogDescription className="text-xs text-muted-foreground">
+                    Specify workspace designation and metadata parameters.
                   </DialogDescription>
                 </DialogHeader>
-                <form id="new-project" onSubmit={addProject} className="grid gap-4">
-                  <label className="grid gap-2 text-sm font-medium">
-                    Name
+                <form id="new-project" onSubmit={addProject} className="grid gap-4 py-2">
+                  <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Project Name
                     <Input
                       autoFocus
                       required
                       value={name}
                       onChange={(event) => setName(event.target.value)}
-                      placeholder="e.g. Engineering Docs"
+                      placeholder="e.g. CORE_ENG_DOCS"
                     />
                   </label>
-                  <label className="grid gap-2 text-sm font-medium">
+                  <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Description
                     <Textarea
                       value={description}
                       onChange={(event) => setDescription(event.target.value)}
-                      placeholder="What will you use this project for?"
+                      placeholder="Node usage parameters..."
                       rows={3}
                     />
                   </label>
                 </form>
                 <DialogFooter>
                   <Button type="submit" form="new-project">
-                    {editProjectId ? "Update" : "Create"} project
+                    {editProjectId ? "EXECUTE_UPDATE" : "INITIALIZE_NODE"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -168,46 +173,52 @@ export default function Home() {
           <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Delete project?</DialogTitle>
-                <DialogDescription>This action cannot be reversed.</DialogDescription>
+                <DialogTitle className="text-destructive uppercase tracking-wider">
+                  &gt; TERMINATE_NODE?
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  Warning: Data destruction is permanent and unrecoverable.
+                </DialogDescription>
               </DialogHeader>
               <DialogFooter>
-                <Button onClick={handleDeleteProject}>Delete project</Button>
+                <Button variant="destructive" onClick={handleDeleteProject}>
+                  CONFIRM_TERMINATE
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </header>
 
-        <section aria-label="Projects" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <section aria-label="Projects" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
             <Link
               key={project.id}
               href={`/project/${project.id}`}
-              className="group relative flex items-start gap-3 rounded-lg border bg-card px-4 py-3.5 shadow-xs transition-colors hover:border-foreground/20 hover:bg-accent/30"
+              className="group relative flex items-start gap-3.5 cyber-chamfer bg-[#12121a] border border-[#2a2a3a] p-4 transition-none hover:border-accent hover:bg-[#1c1c2e]"
             >
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-xs font-semibold text-primary-foreground">
-                {project.name.slice(0, 1).toUpperCase()}
+              <div className="flex size-9 shrink-0 items-center justify-center cyber-chamfer-sm bg-accent text-[#0a0a0f] text-xs font-black">
+                {project.name.slice(0, 2).toUpperCase()}
               </div>
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <h2 className="truncate text-sm font-semibold leading-5">
+                    <h2 className="truncate text-sm font-bold uppercase tracking-wider text-foreground group-hover:text-accent">
                       {project.name}
                     </h2>
-                    <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground font-sans">
                       {project.description}
                     </p>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-0.5">
-                    <ArrowUpRight className="size-3.5 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  <div className="flex shrink-0 items-center gap-1">
+                    <ArrowUpRight className="size-4 text-accent opacity-0 transition-none group-hover:opacity-100" />
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
                           size="icon-xs"
-                          className="text-muted-foreground hover:bg-muted hover:text-foreground"
+                          className="text-muted-foreground hover:bg-[#2a2a3a] hover:text-accent"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -224,13 +235,14 @@ export default function Home() {
                             e.stopPropagation();
                             onEdit(project);
                           }}
+                          className="cursor-pointer"
                         >
-                          <Pencil className="mr-2 size-4 text-muted-foreground" />
-                          <span>Edit</span>
+                          <Pencil className="mr-2 size-3.5 text-accent" />
+                          <span className="uppercase">Edit</span>
                         </DropdownMenuItem>
 
                         <DropdownMenuItem
-                          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                          className="cursor-pointer text-destructive focus:bg-destructive/20 focus:text-destructive"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -238,8 +250,8 @@ export default function Home() {
                             setDeleteOpen(true);
                           }}
                         >
-                          <Trash2 className="mr-2 size-4" />
-                          <span>Delete</span>
+                          <Trash2 className="mr-2 size-3.5" />
+                          <span className="uppercase">Delete</span>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

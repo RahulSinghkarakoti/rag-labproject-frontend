@@ -1,20 +1,44 @@
 import * as React from "react"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
-  return (
-    <input
-      type={type}
-      data-slot="input"
-      className={cn(
-        "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30",
-        "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
-        "aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
-        className
-      )}
-      {...props}
-    />
-  )
+export interface InputProps extends React.ComponentProps<"input"> {
+  hidePromptPrefix?: boolean;
 }
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, hidePromptPrefix = false, ...props }, ref) => {
+    if (hidePromptPrefix) {
+      return (
+        <input
+          type={type}
+          ref={ref}
+          data-slot="input"
+          className={cn(
+            "h-9 w-full min-w-0 bg-[#12121a] border border-[#2a2a3a] cyber-chamfer-sm px-3 py-1 font-mono text-xs text-foreground placeholder:text-muted-foreground/60 transition-none outline-none focus:border-accent focus:ring-1 focus:ring-accent disabled:pointer-events-none disabled:opacity-40",
+            className
+          )}
+          {...props}
+        />
+      )
+    }
+
+    return (
+      <div className="relative flex items-center w-full">
+        <span className="absolute left-2.5 text-accent font-mono text-xs font-bold pointer-events-none select-none z-10">&gt;</span>
+        <input
+          type={type}
+          ref={ref}
+          data-slot="input"
+          className={cn(
+            "h-9 w-full min-w-0 bg-[#12121a] border border-[#2a2a3a] cyber-chamfer-sm pl-6 pr-3 py-1 font-mono text-xs text-foreground placeholder:text-muted-foreground/60 transition-none outline-none focus:border-accent focus:ring-1 focus:ring-accent disabled:pointer-events-none disabled:opacity-40",
+            className
+          )}
+          {...props}
+        />
+      </div>
+    )
+  }
+)
+Input.displayName = "Input"
 
 export { Input }

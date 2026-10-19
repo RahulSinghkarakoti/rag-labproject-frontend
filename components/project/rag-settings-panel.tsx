@@ -95,13 +95,6 @@ const QUERY_TRANSFORMATION_MODES: {
   ];
 
 const MODEL_OPTIONS: Record<LLMProvider, { value: string; label: string }[]> = {
-  // openai: [
-  //   { value: "gpt-4o", label: "GPT-4o" },
-  //   { value: "gpt-4o-mini", label: "GPT-4o Mini" },
-  //   { value: "gpt-4-turbo", label: "GPT-4 Turbo" },
-  //   { value: "o1-mini", label: "o1 Mini" },
-  //   { value: "o3-mini", label: "o3 Mini" },
-  // ],
   groq: [
     { value: "openai/gpt-oss-120b", label: "GPT-OSS 120B" },
     { value: "openai/gpt-oss-20b", label: "GPT-OSS 20B" },
@@ -153,22 +146,22 @@ function FieldInfoButton({ label, info }: { label: string; info?: FieldInfo }) {
                 variant="ghost"
                 size="icon-xs"
                 aria-label={`Learn about ${label}`}
-                className="size-5 rounded-full text-muted-foreground hover:text-foreground"
+                className="size-4 rounded-none text-muted-foreground hover:text-accent"
               >
                 <Info className="size-3" />
               </Button>
             </DialogTrigger>
           </TooltipTrigger>
-          <TooltipContent side="top">Learn about {label}</TooltipContent>
+          <TooltipContent side="top" className="font-mono text-xs bg-[#12121a] border border-[#2a2a3a] text-foreground">Learn about {label}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md font-mono bg-[#12121a] border border-[#2a2a3a] text-foreground">
         <DialogHeader>
-          <DialogTitle>{label}</DialogTitle>
-          <DialogDescription>{info.description}</DialogDescription>
+          <DialogTitle className="text-accent uppercase tracking-wider">&gt; {label}</DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">{info.description}</DialogDescription>
         </DialogHeader>
-        <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">When to use: </span>
+        <div className="cyber-chamfer-sm border border-[#2a2a3a] bg-[#0a0a0f] p-3 text-xs text-muted-foreground">
+          <span className="font-bold text-accent uppercase">WHEN_TO_USE: </span>
           {info.whenToUse}
         </div>
       </DialogContent>
@@ -178,12 +171,12 @@ function FieldInfoButton({ label, info }: { label: string; info?: FieldInfo }) {
 
 function FieldLabel({ label, hint, info }: { label: string; hint?: string; info?: FieldInfo }) {
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex items-center justify-between gap-2 font-mono">
       <div className="flex items-center gap-0.5">
-        <span>{label}</span>
+        <span className="uppercase text-[11px] font-bold text-foreground">{label}</span>
         <FieldInfoButton label={label} info={info} />
       </div>
-      {hint && <span className="text-[10px] font-normal text-muted-foreground/75">{hint}</span>}
+      {hint && <span className="text-[9px] font-mono text-muted-foreground">{hint}</span>}
     </div>
   );
 }
@@ -209,13 +202,13 @@ function SelectField({
   info?: FieldInfo;
 }) {
   return (
-    <div className="grid gap-1.5 text-xs font-medium text-muted-foreground">
+    <div className="grid gap-1.5 text-xs font-mono font-medium text-muted-foreground">
       <FieldLabel label={label} hint={hint} info={info} />
       <select
         aria-label={label}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-xs font-normal text-foreground outline-none transition-colors focus:ring-2 focus:ring-ring/40"
+        className="h-8 w-full bg-[#0a0a0f] border border-[#2a2a3a] cyber-chamfer-sm px-2.5 text-xs font-mono text-foreground outline-none focus:border-accent"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -247,7 +240,7 @@ function NumberField({
   info?: FieldInfo;
 }) {
   return (
-    <div className="grid gap-1.5 text-xs font-medium text-muted-foreground">
+    <div className="grid gap-1.5 text-xs font-mono font-medium text-muted-foreground">
       <FieldLabel label={label} hint={hint} info={info} />
       <Input
         aria-label={label}
@@ -256,12 +249,13 @@ function NumberField({
         max={max}
         step={step}
         value={value}
+        hidePromptPrefix
         onChange={(event) => {
           const val = Number(event.target.value);
           if (isNaN(val)) return;
           onChange(val);
         }}
-        className="h-8 bg-background text-xs"
+        className="h-8 text-xs font-mono"
       />
     </div>
   );
@@ -281,20 +275,20 @@ function ToggleRow({
   info?: FieldInfo;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 text-xs">
+    <div className="flex items-start justify-between gap-3 text-xs font-mono">
       <div className="grid gap-0.5">
-        <span className="flex items-center font-medium text-foreground">
+        <span className="flex items-center font-bold uppercase text-foreground">
           {label}
           <FieldInfoButton label={label} info={info} />
         </span>
-        {description && <span className="text-[11px] text-muted-foreground">{description}</span>}
+        {description && <span className="text-[10px] text-muted-foreground">{description}</span>}
       </div>
       <input
         aria-label={label}
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
-        className="mt-0.5 size-4 accent-primary"
+        className="mt-0.5 size-4 accent-accent"
       />
     </div>
   );
@@ -318,28 +312,28 @@ function SectionAccordion({
   children,
 }: SectionAccordionProps) {
   return (
-    <Collapsible open={isOpen} onOpenChange={onToggle} className="rounded-lg border bg-card/60 shadow-2xs transition-all">
+    <Collapsible open={isOpen} onOpenChange={onToggle} className="cyber-chamfer-sm border border-[#2a2a3a] bg-[#12121a] font-mono transition-none">
       <CollapsibleTrigger asChild>
         <button
           type="button"
-          className="flex w-full items-center justify-between px-3 py-2.5 text-left transition hover:bg-muted/40"
+          className="flex w-full items-center justify-between px-3 py-2.5 text-left transition-none hover:bg-[#1c1c2e]"
         >
           <div className="flex items-center gap-2">
-            <span className="text-primary">{icon}</span>
-            <span className="text-xs font-semibold text-foreground">{title}</span>
+            <span className="text-accent">{icon}</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-foreground">{title}</span>
             {badge && (
-              <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+              <span className="cyber-chamfer-sm bg-accent/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-accent border border-accent/40">
                 {badge}
               </span>
             )}
           </div>
           <ChevronDown
-            className={`size-4 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""
+            className={`size-4 text-accent transition-none ${isOpen ? "rotate-180" : ""
               }`}
           />
         </button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="border-t px-3 py-3 space-y-3 bg-background/50">
+      <CollapsibleContent className="border-t border-[#2a2a3a] px-3 py-3 space-y-3 bg-[#0a0a0f]">
         {children}
       </CollapsibleContent>
     </Collapsible>
@@ -369,10 +363,8 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
     Array.isArray(state?.documents) ? state.documents : []
   );
 
-  // Expandable panel state (allows expanding width for detailed inspection)
   const [isPanelExpanded, setIsPanelExpanded] = useState<boolean>(false);
 
-  // Expandable accordions state for each config category
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     knowledge_bases: false,
     query_transformation: false,
@@ -437,7 +429,6 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
 
   const values: ProjectConfig = config ?? defaultProjectConfig;
 
-  // Strict updater ensuring only valid ThreadConfig sections and fields are saved
   const updateSection = <K extends keyof ProjectConfig>(
     section: K,
     patch: Partial<ProjectConfig[K]>
@@ -454,7 +445,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
     void saveThreadConfig(threadId, nextConfig);
   };
 
-  const currentProvider: LLMProvider = values.generation.provider || "openai";
+  const currentProvider: LLMProvider = values.generation.provider || "groq";
   const availableModels = MODEL_OPTIONS[currentProvider] || MODEL_OPTIONS.groq;
   const currentModeInfo = QUERY_TRANSFORMATION_MODES.find(
     (m) => m.value === values.query_transformation.mode
@@ -462,18 +453,18 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
 
   return (
     <aside
-      className={`flex min-h-0 shrink-0 flex-col border-l bg-muted/10 transition-all duration-200 ${isPanelExpanded ? "w-[440px]" : "w-80"
+      className={`flex min-h-0 shrink-0 flex-col border-l border-[#2a2a3a] bg-[#0a0a0f] font-mono transition-none ${isPanelExpanded ? "w-[440px]" : "w-80"
         }`}
     >
       {/* Top Header */}
-      <div className="flex items-center justify-between border-b px-4 py-3.5">
+      <div className="flex items-center justify-between border-b border-[#2a2a3a] px-4 py-3.5 bg-[#12121a]">
         <div>
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <SlidersHorizontal className="size-4 text-primary" />
-            <span>Thread Configuration</span>
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
+            <SlidersHorizontal className="size-4 text-accent" />
+            <span>&gt; RAG_CONFIG_PANEL</span>
           </div>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Strict RAG execution parameters
+          <p className="mt-0.5 text-[10px] text-muted-foreground uppercase">
+            Execution parameters &amp; tuning
           </p>
         </div>
         <div className="flex items-center gap-1">
@@ -483,6 +474,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
             aria-label={isPanelExpanded ? "Collapse panel width" : "Expand panel width"}
             title={isPanelExpanded ? "Collapse panel width" : "Expand panel width"}
             onClick={() => setIsPanelExpanded((prev) => !prev)}
+            className="hover:text-accent"
           >
             {isPanelExpanded ? (
               <Minimize2 className="size-3.5" />
@@ -498,6 +490,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
             onClick={() => {
               if (threadId) void refreshThreadConfig(threadId).catch(() => undefined);
             }}
+            className="hover:text-accent"
           >
             <RotateCcw className="size-3.5" />
           </Button>
@@ -505,53 +498,40 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
       </div>
 
       {/* Main Body */}
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
-        {/* Pipeline & Knowledge Base Badges */}
-        {/* <div className="rounded-lg border bg-background/60 p-3 text-xs shadow-2xs">
-          <div className="flex items-center justify-between font-semibold">
-            <span>Pipeline version</span>
-            <span className="text-primary font-mono text-[11px]">
-              v{latestPipelineVersion ?? 1}
-            </span>
-          </div>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            All updates sync strictly to thread metadata.
-          </p>
-        </div> */}
- 
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
         <SectionAccordion
-          title="Knowledge bases"
+          title="KNOWLEDGE_BASES"
           badge={`${thread?.knowledge_bases?.length ?? 0}`}
           icon={<Database className="size-3.5" />}
           isOpen={openSections.knowledge_bases}
           onToggle={() => toggleSection("knowledge_bases")}
         >
           {!thread?.knowledge_bases?.length ? (
-            <p className="text-[11px] text-muted-foreground">No knowledge bases attached to this thread.</p>
+            <p className="text-[10px] uppercase text-muted-foreground">NO_ATTACHED_KNOWLEDGE_BASES</p>
           ) : documentsLoading ? (
-            <p className="text-[11px] text-muted-foreground">Loading documents…</p>
+            <p className="text-[10px] uppercase text-muted-foreground">LOADING_DOCUMENTS...</p>
           ) : (
             <div className="space-y-2">
               {thread.knowledge_bases.map((kb) => {
                 const kbDocuments = threadDocuments[kb.id] ?? [];
                 return (
-                  <div key={kb.id} className="rounded-md border bg-background px-2.5 py-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-xs font-semibold">{kb.name}</span>
-                      <span className="shrink-0 text-[10px] text-muted-foreground">{kbDocuments.length} docs</span>
+                  <div key={kb.id} className="cyber-chamfer-sm border border-[#2a2a3a] bg-[#12121a] px-2.5 py-2">
+                    <div className="flex items-center justify-between gap-2 font-bold uppercase text-xs">
+                      <span className="truncate text-foreground">{kb.name}</span>
+                      <span className="shrink-0 text-[9px] text-accent">{kbDocuments.length} DOCS</span>
                     </div>
                     {kbDocuments.length ? (
-                      <div className="mt-1.5 space-y-1 border-t pt-1.5">
+                      <div className="mt-1.5 space-y-1 border-t border-[#2a2a3a] pt-1.5">
                         {kbDocuments.map((document) => (
-                          <div key={document.id} className="flex min-w-0 items-center gap-1.5 text-[10px] text-muted-foreground">
-                            <FileText className="size-3 shrink-0" />
+                          <div key={document.id} className="flex min-w-0 items-center gap-1.5 text-[9px] text-muted-foreground">
+                            <FileText className="size-3 shrink-0 text-accent" />
                             <span className="truncate">{document.name}</span>
-                            <span className="ml-auto shrink-0">{document.status}</span>
+                            <span className="ml-auto shrink-0 uppercase">{document.status}</span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="mt-1 text-[10px] text-muted-foreground">No documents</p>
+                      <p className="mt-1 text-[9px] uppercase text-muted-foreground">NO_DOCUMENTS</p>
                     )}
                   </div>
                 );
@@ -564,7 +544,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
           <div className="space-y-3">
             {/* 1. QUERY TRANSFORMATION */}
             <SectionAccordion
-              title="Query Transformation"
+              title="QUERY_TRANSFORMATION"
               badge={values.query_transformation.mode}
               icon={<Sparkles className="size-3.5" />}
               isOpen={openSections.query_transformation}
@@ -585,13 +565,13 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                 }
               />
               {currentModeInfo && (
-                <p className="rounded bg-muted/50 p-2 text-[11px] text-muted-foreground">
+                <p className="cyber-chamfer-sm border border-[#2a2a3a] bg-[#12121a] p-2 text-[10px] text-muted-foreground">
                   {currentModeInfo.description}
                 </p>
               )}
 
               <NumberField
-                label="Query count"
+                label="Query Count"
                 value={values.query_transformation.query_count}
                 min={1}
                 max={10}
@@ -605,8 +585,8 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
               />
 
               <ToggleRow
-                label="Include original query"
-                description="Include the raw user query alongside generated queries"
+                label="Include Original Query"
+                description="Include raw query in retrieval batch"
                 info={{ description: "Keeps the original question in the retrieval set in addition to transformed queries.", whenToUse: "Enable it when transformations may lose exact names, identifiers, or wording." }}
                 checked={values.query_transformation.include_original}
                 onChange={(include_original) =>
@@ -614,31 +594,28 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                 }
               />
 
-              <div className="grid gap-1.5 text-xs font-medium text-muted-foreground">
+              <div className="grid gap-1.5 text-xs font-mono font-medium text-muted-foreground">
                 <div className="flex items-center justify-between">
-                  <span className="flex items-center">Custom prompt template<FieldInfoButton label="Custom prompt template" info={{ description: "An optional instruction used to customize query transformation. The template can use the query and count placeholders.", whenToUse: "Use it only when the built-in transformation behavior does not match your domain or question style." }} /></span>
-                  <span className="text-[10px] font-normal text-muted-foreground/75">
-                    Optional
-                  </span>
+                  <span className="flex items-center uppercase font-bold text-foreground">Custom Prompt Template<FieldInfoButton label="Custom Prompt Template" info={{ description: "An optional instruction used to customize query transformation.", whenToUse: "Use it only when default transformation behavior requires custom prompt rules." }} /></span>
                 </div>
                 <Textarea
                   aria-label="Custom prompt template"
                   value={values.query_transformation.prompt_template ?? ""}
-                  placeholder="e.g. Rewrite this query: {query} for count: {count}"
+                  placeholder="e.g. Rewrite query: {query} count: {count}"
                   onChange={(event) => {
                     const text = event.target.value;
                     updateSection("query_transformation", {
                       prompt_template: text.trim() === "" ? null : text,
                     });
                   }}
-                  className="min-h-16 text-xs font-mono"
+                  className="min-h-16 text-[11px] font-mono"
                 />
               </div>
             </SectionAccordion>
 
             {/* 2. RETRIEVAL */}
             <SectionAccordion
-              title="Retrieval"
+              title="RETRIEVAL"
               badge={`k=${values.retrieval.top_k}, α=${values.retrieval.alpha}`}
               icon={<Database className="size-3.5" />}
               isOpen={openSections.retrieval}
@@ -648,7 +625,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                 label="Strategy"
                 value={values.retrieval.strategy}
                 options={RETRIEVAL_STRATEGIES}
-                info={{ description: "Selects the search method used to find candidate passages.", whenToUse: "Use Hybrid for a balance of keyword and semantic matching, Dense for meaning-based search, Sparse for exact terms, or MMR for more diverse results." }}
+                info={{ description: "Selects the search method used to find candidate passages.", whenToUse: "Use Hybrid for a balance of keyword and semantic matching." }}
                 onChange={(strategy) =>
                   updateSection("retrieval", { strategy: strategy as RetrievalStrategy })
                 }
@@ -662,7 +639,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   max={1.0}
                   step={0.05}
                   hint="0.0 - 1.0"
-                  info={{ description: "Balances sparse keyword search against dense embedding search. 0 is sparse; 1 is dense.", whenToUse: "Raise it for conceptual questions; lower it when exact terms, IDs, or names matter." }}
+                  info={{ description: "Balances sparse keyword search against dense embedding search.", whenToUse: "Raise for conceptual queries; lower for exact terms." }}
                   onChange={(alpha) =>
                     updateSection("retrieval", {
                       alpha: Math.min(1.0, Math.max(0.0, alpha)),
@@ -675,7 +652,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   min={1}
                   max={100}
                   hint="1 - 100"
-                  info={{ description: "The number of passages returned to the answer pipeline after retrieval.", whenToUse: "Increase it when answers need broader context; lower it to reduce noise and latency." }}
+                  info={{ description: "Number of passages returned after retrieval.", whenToUse: "Increase for broader context." }}
                   onChange={(top_k) =>
                     updateSection("retrieval", {
                       top_k: Math.min(100, Math.max(1, top_k)),
@@ -688,7 +665,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   min={1}
                   max={200}
                   hint="1 - 200"
-                  info={{ description: "The number of candidates fetched before later filtering, diversity selection, or reranking.", whenToUse: "Set it higher than Top K when using MMR or reranking and you want more candidates to compare." }}
+                  info={{ description: "Candidates fetched before filtering or reranking.", whenToUse: "Set higher than Top K when reranking." }}
                   onChange={(fetch_k) =>
                     updateSection("retrieval", {
                       fetch_k: Math.min(200, Math.max(1, fetch_k)),
@@ -696,45 +673,26 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   }
                 />
                 <NumberField
-                  label="Similarity threshold"
+                  label="Sim Threshold"
                   value={values.retrieval.similarity_threshold ?? 0.7}
                   min={-1}
                   max={1}
                   step={0.05}
                   hint="-1.0 - 1.0"
-                  info={{ description: "Excludes retrieved passages whose similarity score is below this value.", whenToUse: "Use it to remove weak matches; raise it for precision, or lower it when recall is more important." }}
+                  info={{ description: "Excludes passages below similarity threshold.", whenToUse: "Raise to filter weak matches." }}
                   onChange={(similarity_threshold) =>
                     updateSection("retrieval", {
                       similarity_threshold: Math.min(1, Math.max(-1, similarity_threshold)),
                     })
                   }
                 />
-                <NumberField
-                  label="MMR lambda"
-                  value={values.retrieval.mmr_lambda}
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  hint="0.0 - 1.0"
-                  info={{ description: "Controls the MMR trade-off between relevance and diversity. 1 favors relevance; 0 favors diversity.", whenToUse: "Use it with MMR: raise it for focused answers and lower it when results are repetitive." }}
-                  onChange={(mmr_lambda) =>
-                    updateSection("retrieval", {
-                      mmr_lambda: Math.min(1, Math.max(0, mmr_lambda)),
-                    })
-                  }
-                />
-              </div>
-
-              <div className="rounded bg-muted/40 p-2 text-[10px] text-muted-foreground">
-                <span className="font-semibold text-foreground">Alpha:</span> 0.0 = pure BM25
-                sparse search, 1.0 = pure dense vector embedding search.
               </div>
 
               <SelectField
-                label="Sparse model"
+                label="Sparse Model"
                 value={values.retrieval.sparse_model}
                 options={SPARSE_MODELS}
-                info={{ description: "The lexical search algorithm used for sparse retrieval.", whenToUse: "Use the default BM25 for keyword, phrase, and identifier matching." }}
+                info={{ description: "Lexical search algorithm.", whenToUse: "BM25 keyword matching." }}
                 onChange={(sparse_model) =>
                   updateSection("retrieval", { sparse_model })
                 }
@@ -742,37 +700,38 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
 
               <div className="grid gap-1.5">
                 <SelectField
-                  label="Dense model"
+                  label="Dense Model"
                   value={values.retrieval.dense_model}
                   options={DENSE_MODELS}
-                  info={{ description: "The embedding model used to compare the meaning of queries and passages.", whenToUse: "Choose a model compatible with the knowledge base; use a larger model when semantic quality matters more than speed." }}
+                  info={{ description: "Embedding model used for semantic vector matching.", whenToUse: "Must match Knowledge Base embedding config." }}
                   onChange={(dense_model) =>
                     updateSection("retrieval", { dense_model })
                   }
                 />
                 <Input
+                  hidePromptPrefix
                   value={values.retrieval.dense_model}
-                  placeholder="Or enter custom embedding model ID"
+                  placeholder="Custom embedding model ID"
                   onChange={(e) =>
                     updateSection("retrieval", { dense_model: e.target.value })
                   }
-                  className="h-7 text-[11px] font-mono"
+                  className="h-7 text-[10px] font-mono"
                 />
               </div>
             </SectionAccordion>
 
             {/* 3. RERANKING */}
             <SectionAccordion
-              title="Reranking"
-              badge={values.reranking.enabled ? "Enabled" : "Disabled"}
+              title="RERANKING"
+              badge={values.reranking.enabled ? "ACTIVE" : "OFF"}
               icon={<Filter className="size-3.5" />}
               isOpen={openSections.reranking}
               onToggle={() => toggleSection("reranking")}
             >
               <ToggleRow
                 label="Enable Reranking"
-                description="Run cross-encoder to re-score retrieved passages"
-                info={{ description: "Runs a second relevance model over retrieved passages to improve their ordering.", whenToUse: "Enable it when retrieval returns plausible but poorly ordered results; disable it to reduce latency and compute." }}
+                description="Cross-encoder re-scoring of passages"
+                info={{ description: "Runs cross-encoder over candidates to improve relevance order.", whenToUse: "Enable for higher precision." }}
                 checked={values.reranking.enabled}
                 onChange={(enabled) =>
                   updateSection("reranking", {
@@ -787,19 +746,20 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                     label="Reranker Model"
                     value={values.reranking.model}
                     options={RERANKER_MODELS}
-                    info={{ description: "The cross-encoder model that scores query-passage relevance.", whenToUse: "Use the base model for lower cost or the larger model when ranking quality is more important." }}
+                    info={{ description: "Cross-encoder model for scoring query-passage relevance.", whenToUse: "Base for speed, large for precision." }}
                     onChange={(model) =>
                       updateSection("reranking", { model })
                     }
                   />
 
                   <Input
+                    hidePromptPrefix
                     value={values.reranking.model}
-                    placeholder="Or enter custom reranker model ID"
+                    placeholder="Custom reranker model ID"
                     onChange={(event) =>
                       updateSection("reranking", { model: event.target.value })
                     }
-                    className="h-7 text-[11px] font-mono"
+                    className="h-7 text-[10px] font-mono"
                   />
 
                   <NumberField
@@ -808,7 +768,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                     min={1}
                     max={200}
                     hint="1 - 200"
-                    info={{ description: "The maximum number of passages kept after reranking.", whenToUse: "Increase it when the final answer needs more supporting context; keep it near Top K for concise context." }}
+                    info={{ description: "Maximum passages kept after reranking.", whenToUse: "Final context count." }}
                     onChange={(top_n) =>
                       updateSection("reranking", {
                         top_n: Math.min(200, Math.max(1, top_n)),
@@ -816,63 +776,10 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                     }
                   />
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <NumberField
-                      label="Top K"
-                      value={values.reranking.top_k}
-                      min={1}
-                      max={100}
-                      hint="1 - 100"
-                      info={{ description: "The number of retrieved candidates sent into the reranker.", whenToUse: "Increase it when relevant passages are being missed, at the cost of reranking time." }}
-                      onChange={(top_k) =>
-                        updateSection("reranking", {
-                          top_k: Math.min(100, Math.max(1, top_k)),
-                        })
-                      }
-                    />
-                    <NumberField
-                      label="Batch size"
-                      value={values.reranking.batch_size}
-                      min={1}
-                      max={256}
-                      hint="1 - 256"
-                      info={{ description: "How many passages the reranker scores in one batch.", whenToUse: "Increase it for throughput if memory allows; lower it when the reranker uses too much memory." }}
-                      onChange={(batch_size) =>
-                        updateSection("reranking", {
-                          batch_size: Math.min(256, Math.max(1, batch_size)),
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="grid gap-1.5 text-xs font-medium text-muted-foreground">
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center">Score threshold<FieldInfoButton label="Score threshold" info={{ description: "An optional minimum reranker score; passages below it are excluded.", whenToUse: "Use it when low-quality matches should never reach generation; leave empty when score scales vary by model." }} /></span>
-                      <span className="text-[10px] font-normal text-muted-foreground/75">
-                        Optional
-                      </span>
-                    </div>
-                    <Input
-                      aria-label="Score threshold"
-                      type="number"
-                      step="any"
-                      value={values.reranking.score_threshold ?? ""}
-                      placeholder="No threshold"
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        if (value !== "" && Number.isNaN(Number(value))) return;
-                        updateSection("reranking", {
-                          score_threshold: value === "" ? null : Number(value),
-                        });
-                      }}
-                      className="h-8 bg-background text-xs"
-                    />
-                  </div>
-
                   <ToggleRow
-                    label="Return documents"
-                    description="Include reranked documents in the pipeline result"
-                    info={{ description: "Includes the final reranked passages in the pipeline response for downstream use or inspection.", whenToUse: "Enable it when the client needs source documents; disable it to return only the generated answer." }}
+                    label="Return Documents"
+                    description="Include reranked passages in result"
+                    info={{ description: "Returns source documents along with answer.", whenToUse: "Enable for citations." }}
                     checked={values.reranking.return_documents}
                     onChange={(return_documents) =>
                       updateSection("reranking", { return_documents })
@@ -884,7 +791,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
 
             {/* 4. GENERATION */}
             <SectionAccordion
-              title="Generation"
+              title="GENERATION"
               badge={`${values.generation.provider}: ${values.generation.llm_model}`}
               icon={<Brain className="size-3.5" />}
               isOpen={openSections.generation}
@@ -894,15 +801,14 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                 label="Provider"
                 value={currentProvider}
                 options={[
-                  { value: "openai", label: "OpenAI" },
                   { value: "groq", label: "Groq" },
                   { value: "gemini", label: "Gemini" },
                 ]}
-                info={{ description: "The service that runs answer generation.", whenToUse: "Choose the provider configured for your deployment and preferred latency, cost, or model availability." }}
+                info={{ description: "Service running answer generation.", whenToUse: "Select active LLM backend provider." }}
                 onChange={(provider) => {
                   const newProvider = provider as LLMProvider;
                   const defaultModel =
-                    MODEL_OPTIONS[newProvider]?.[0]?.value || "gpt-4o";
+                    MODEL_OPTIONS[newProvider]?.[0]?.value || "gemini-2.5-flash";
                   updateSection("generation", {
                     provider: newProvider,
                     llm_model: defaultModel,
@@ -915,18 +821,19 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   label="Model"
                   value={values.generation.llm_model}
                   options={availableModels}
-                  info={{ description: "The language model used to write the final response.", whenToUse: "Choose a stronger model for difficult synthesis or a faster model for simple, low-latency answers." }}
+                  info={{ description: "LLM model for response generation.", whenToUse: "Flash models for low latency." }}
                   onChange={(llm_model) =>
                     updateSection("generation", { llm_model })
                   }
                 />
                 <Input
+                  hidePromptPrefix
                   value={values.generation.llm_model}
-                  placeholder="Or enter custom model ID"
+                  placeholder="Custom model ID"
                   onChange={(e) =>
                     updateSection("generation", { llm_model: e.target.value })
                   }
-                  className="h-7 text-[11px] font-mono"
+                  className="h-7 text-[10px] font-mono"
                 />
               </div>
 
@@ -938,7 +845,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   max={2.0}
                   step={0.05}
                   hint="0.0 - 2.0"
-                  info={{ description: "Controls randomness in generated text. Lower values are more consistent; higher values are more varied.", whenToUse: "Use a low value for factual RAG answers and raise it only when more creative wording is wanted." }}
+                  info={{ description: "Controls output randomness.", whenToUse: "Keep low for grounded RAG." }}
                   onChange={(temperature) =>
                     updateSection("generation", {
                       temperature: Math.min(2.0, Math.max(0.0, temperature)),
@@ -952,7 +859,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   max={32000}
                   step={100}
                   hint="1 - 32,000"
-                  info={{ description: "The maximum number of tokens allowed in the generated response.", whenToUse: "Increase it for long answers; keep it lower to control cost and prevent unnecessarily verbose output." }}
+                  info={{ description: "Maximum tokens in response.", whenToUse: "Controls answer length." }}
                   onChange={(max_tokens) =>
                     updateSection("generation", {
                       max_tokens: Math.min(32000, Math.max(1, max_tokens)),
@@ -963,8 +870,8 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
 
               <ToggleRow
                 label="Enforce Citations"
-                description="Require grounded citations in the generated response"
-                info={{ description: "Requires the answer to include citations grounded in retrieved source material.", whenToUse: "Enable it when traceability matters; keep it off when citations are not supported by the selected pipeline." }}
+                description="Require grounded citations in response"
+                info={{ description: "Requires answer to cite source passages.", whenToUse: "Enable for verifiable RAG outputs." }}
                 checked={values.generation.citation_enforced}
                 onChange={(citation_enforced) =>
                   updateSection("generation", { citation_enforced })
@@ -973,11 +880,11 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
             </SectionAccordion>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-2 rounded-lg border bg-background/60 p-4 text-center text-xs text-muted-foreground shadow-2xs">
-            <Database className="size-5 text-primary" />
-            <p>No documents found</p>
-            <p className="text-[10px]">
-              Add one or more documents to configure RAG settings.
+          <div className="flex flex-col items-center justify-center gap-2 cyber-chamfer-sm border border-[#2a2a3a] bg-[#12121a] p-4 text-center text-xs text-muted-foreground font-mono">
+            <Database className="size-5 text-accent" />
+            <p className="font-bold uppercase text-foreground">NO DOCUMENTS FOUND</p>
+            <p className="text-[10px] text-muted-foreground uppercase">
+              Upload documents to configure RAG parameters.
             </p>
           </div>
         )}

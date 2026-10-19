@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
+import { ThemeAccentSelector } from "@/components/theme-accent-selector";
 
 function GoogleIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="size-5 shrink-0" aria-hidden="true">
       <path
         fill="#4285F4"
         d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47a5.54 5.54 0 0 1-2.4 3.63v3h3.88c2.27-2.09 3.54-5.17 3.54-8.87Z"
@@ -24,14 +25,6 @@ function GoogleIcon() {
   );
 }
 
-function GitHubIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-5" fill="currentColor" aria-hidden="true">
-      <path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.11.79-.25.79-.56v-2c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.68.8.56A11.5 11.5 0 0 0 12 .5Z" />
-    </svg>
-  );
-}
-
 const errorMessages: Record<string, string> = {
   OAuthAccountNotLinked:
     "This email is already linked to another sign-in method. Use the provider you signed up with.",
@@ -47,8 +40,6 @@ export default async function LoginPage({
   const { callbackUrl = "/", error } = await searchParams;
 
   const session = await auth();
-  // A failed refresh still returns a session object with `error` and no user.
-  // Only redirect away from login when the user is actually authenticated.
   const isAuthenticated =
     Boolean(session?.user) && !(session as { error?: string } | null)?.error;
   if (isAuthenticated) redirect(callbackUrl);
@@ -59,48 +50,50 @@ export default async function LoginPage({
   }
 
   const buttonClass =
-    "flex w-full items-center justify-center gap-3 rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:hover:bg-neutral-800 dark:focus-visible:outline-neutral-100";
+    "flex w-full items-center justify-center gap-3 cyber-chamfer-sm border border-accent bg-transparent px-4 py-3 font-mono text-xs font-bold uppercase tracking-wider text-accent transition-none hover:bg-accent hover:text-accent-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
   return (
-    <main className="flex min-h-svh items-center justify-center bg-neutral-100 px-4 dark:bg-neutral-950">
-      <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-50">
-            Welcome back
-          </h1>
-          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-            Sign in to continue to RAG Lab
-          </p>
+    <main className="flex min-h-svh items-center justify-center bg-[#0a0a0f] p-4 text-[#e0e0e0]">
+      <div className="w-full max-w-md cyber-chamfer border border-[#2a2a3a] bg-[#12121a] p-8 shadow-2xl font-mono">
+        <div className="mb-6 border-b border-[#2a2a3a] pb-4 flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-block size-2 bg-accent animate-pulse"></span>
+              <span className="text-[10px] uppercase tracking-widest text-accent font-semibold">
+                SYS.AUTH // TERMINAL_V4
+              </span>
+            </div>
+            <h1 className="text-2xl font-black uppercase tracking-widest text-foreground">
+              SYSTEM ACCESS
+            </h1>
+            <p className="mt-1 text-xs text-muted-foreground">
+              &gt; Authenticate credentials to access RAG Lab node
+            </p>
+          </div>
+          {/* <ThemeAccentSelector /> */}
         </div>
 
         {error && (
           <div
             role="alert"
-            className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+            className="mb-6 cyber-chamfer-sm border border-destructive bg-destructive/10 px-3 py-2 text-xs font-mono text-destructive"
           >
-            {errorMessages[error] ?? "Something went wrong. Please try again."}
+            [ERROR]: {errorMessages[error] ?? "Authentication failed. Retry sequence."}
           </div>
         )}
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           <form action={loginWith.bind(null, "google")}>
             <button type="submit" className={buttonClass}>
               <GoogleIcon />
-              Continue with Google
+              AUTHENTICATE VIA GOOGLE
             </button>
           </form>
-
-          {/* <form action={loginWith.bind(null, "github")}>
-            <button  type="submit" className={buttonClass}>
-              <GitHubIcon />
-              Continue with GitHub
-            </button>
-          </form> */}
         </div>
 
-        <p className="mt-6 text-center text-xs text-neutral-500 dark:text-neutral-400">
-          By continuing, you agree to our Terms and Privacy Policy.
-        </p>
+        <div className="mt-8 border-t border-[#2a2a3a] pt-4 text-center text-[10px] text-muted-foreground uppercase tracking-wider">
+          &gt; SECURE PROTOCOL ENFORCED  
+        </div>
       </div>
     </main>
   );

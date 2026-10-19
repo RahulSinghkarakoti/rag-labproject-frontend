@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { ThreadMessage } from "@/lib/thread-api";
 import { useThreadStore } from "@/lib/thread-store";
+import { ThreadMessageLoader } from "@/components/ui/ascii-loader";
 import toolkit from "./toolkit";
 
 type MyRuntimeProviderProps = {
@@ -55,16 +56,20 @@ function toBranchableHistory(messages: ThreadMessage[]) {
 
 function RuntimeLoading({ error, onRetry }: { error: string | null; onRetry: () => void }) {
   return (
-    <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
+    <div className="flex h-full w-full items-center justify-center p-6 text-sm font-mono text-foreground bg-[#0a0a0f]">
       {error ? (
-        <div className="space-y-2 text-center">
-          <p>Unable to load conversation history.</p>
-          <button type="button" className="text-primary underline" onClick={onRetry}>
-            Retry
+        <div className="space-y-3 text-center">
+          <p className="text-destructive text-xs uppercase font-bold">&gt; UNABLE_TO_LOAD_CONVERSATION_HISTORY</p>
+          <button
+            type="button"
+            className="cyber-chamfer-sm border border-accent bg-[#12121a] px-3 py-1 text-xs font-bold uppercase text-accent hover:bg-accent hover:text-[#0a0a0f]"
+            onClick={onRetry}
+          >
+            [ RETRY_FETCH ]
           </button>
         </div>
       ) : (
-        "Loading conversation history…"
+        <ThreadMessageLoader label="FETCHING_CONVERSATION_HISTORY" />
       )}
     </div>
   );
@@ -121,14 +126,25 @@ function RuntimeInner({
       const pendingAction = useThreadStore.getState().pendingMessageAction;
       clearPendingMessageAction();
       let response: Response;
-      if (pendingAction?.type === "edit") {
-        await editMessage(threadId, pendingAction.messageId, content);
-        response = await retryMessage(threadId, pendingAction.messageId, abortSignal);
-      } else if (pendingAction?.type === "retry") {
-        response = await retryMessage(threadId, pendingAction.messageId, abortSignal);
-      } else {
-        response = await sendMessage(threadId, content, abortSignal);
+      if (abortSignal?.aborted) return;
+
+      try {
+        if (pendingAction?.type === "edit") {
+          await editMessage(threadId, pendingAction.messageId, content);
+          response = await retryMessage(threadId, pendingAction.messageId, abortSignal);
+        } else if (pendingAction?.type === "retry") {
+          response = await retryMessage(threadId, pendingAction.messageId, abortSignal);
+        } else {
+          response = await sendMessage(threadId, content, abortSignal);
+        }
+      } catch (err: any) {
+        if (err?.name === "AbortError" || abortSignal?.aborted) {
+          return;
+        }
+        throw err;
       }
+
+      if (abortSignal?.aborted) return;
       if (!response.body) throw new Error("Message response has no body");
 
       const reader = response.body.getReader();
@@ -150,60 +166,94 @@ function RuntimeInner({
         return { event, payload: JSON.parse(data) as Record<string, unknown> };
       };
 
-      while (true) {
-        const { done, value } = await reader.read();
-        buffer += decoder.decode(value, { stream: !done });
-        const frames = buffer.split(/\r?\n\r?\n/);
-        buffer = frames.pop() ?? "";
-        if (done && buffer.trim()) {
-          frames.push(buffer);
-          buffer = "";
+      const onAbort = () => {
+        try {
+          reader.cancel().catch(() => undefined);
+        } catch {
+          // ignore
         }
+      };
 
-        for (const frame of frames) {
-          const { event, payload } = consumeFrame(frame);
-          if (!payload) continue;
-          if (completed) continue;
-          if (event === "started") {
-            runId = payload.run_id;
-            userMessageId = payload.message_id;
-            continue;
-          }
-          if (event === "error" || payload.type === "error") {
-            const error = payload.error;
-            throw new Error(
-              typeof error === "object" && error !== null && "message" in error
-                ? String(error.message)
-                : String(error ?? "Message request failed"),
-            );
-          }
-          if (event === "token" || payload.type === "token") {
-            streamedContent += String(payload.content ?? "");
-            yield {
-              content: [{ type: "text", text: streamedContent }],
-              metadata: {
-                custom: { run_id: runId, user_message_id: userMessageId },
-              },
-            };
-          }
-          if (event === "complete" || payload.type === "complete") {
-            completed = true;
-            const finalContent = String(payload.response ?? streamedContent);
-            streamedContent = finalContent;
-            yield {
-              content: [{ type: "text", text: finalContent }],
-              metadata: {
-                custom: {
-                  output_message_id: payload.output_message_id,
-                  run_id: payload.run_id ?? runId,
-                  user_message_id: userMessageId,
-                },
-              },
-            };
-          }
+      if (abortSignal) {
+        if (abortSignal.aborted) {
+          onAbort();
+          return;
         }
-        if (done) break;
+        abortSignal.addEventListener("abort", onAbort, { once: true });
       }
+
+      try {
+        while (true) {
+          if (abortSignal?.aborted) break;
+
+          const { done, value } = await reader.read();
+
+          if (abortSignal?.aborted) break;
+
+          buffer += decoder.decode(value, { stream: !done });
+          const frames = buffer.split(/\r?\n\r?\n/);
+          buffer = frames.pop() ?? "";
+          if (done && buffer.trim()) {
+            frames.push(buffer);
+            buffer = "";
+          }
+
+          for (const frame of frames) {
+            const { event, payload } = consumeFrame(frame);
+            if (!payload) continue;
+            if (completed) continue;
+            if (event === "started") {
+              runId = payload.run_id;
+              userMessageId = payload.message_id;
+              continue;
+            }
+            if (event === "error" || payload.type === "error") {
+              const error = payload.error;
+              throw new Error(
+                typeof error === "object" && error !== null && "message" in error
+                  ? String(error.message)
+                  : String(error ?? "Message request failed"),
+              );
+            }
+            if (event === "token" || payload.type === "token") {
+              streamedContent += String(payload.content ?? "");
+              yield {
+                content: [{ type: "text", text: streamedContent }],
+                metadata: {
+                  custom: { run_id: runId, user_message_id: userMessageId },
+                },
+              };
+            }
+            if (event === "complete" || payload.type === "complete") {
+              completed = true;
+              const finalContent = String(payload.response ?? streamedContent);
+              streamedContent = finalContent;
+              yield {
+                content: [{ type: "text", text: finalContent }],
+                metadata: {
+                  custom: {
+                    output_message_id: payload.output_message_id,
+                    run_id: payload.run_id ?? runId,
+                    user_message_id: userMessageId,
+                  },
+                },
+              };
+            }
+          }
+          if (done) break;
+        }
+      } catch (err: any) {
+        if (err?.name === "AbortError" || abortSignal?.aborted) {
+          return;
+        }
+        throw err;
+      } finally {
+        if (abortSignal) {
+          abortSignal.removeEventListener("abort", onAbort);
+        }
+      }
+
+      if (abortSignal?.aborted) return;
 
       if (!completed) throw new Error("Message stream ended before completion");
     },

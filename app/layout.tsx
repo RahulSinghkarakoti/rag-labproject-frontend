@@ -1,9 +1,9 @@
- 
 import type { Metadata } from "next";
 import "./globals.css";
 import AuthSessionHandler from "@/components/AuthSessionHandler";
 import { SessionProvider } from "next-auth/react";
- 
+import { ThemeAccentProvider } from "@/components/theme-accent-provider";
+
 export const metadata: Metadata = {
   title: "assistant-ui with Assistant Transport",
   description:
@@ -16,14 +16,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="font-sans antialiased">
+    <html lang="en" className="dark">
+      <body className="scanlines font-mono bg-background text-foreground antialiased selection:bg-accent selection:text-[#0a0a0f]">
         <div className="flex h-screen flex-col">
           <SessionProvider>
             <AuthSessionHandler>
-          <main className="flex-1 overflow-hidden">{children}</main>
+              <ThemeAccentProvider>
+                <main className="flex-1 overflow-hidden">{children}</main>
+              </ThemeAccentProvider>
             </AuthSessionHandler>
-        </SessionProvider>
+          </SessionProvider>
         </div>
       </body>
     </html>

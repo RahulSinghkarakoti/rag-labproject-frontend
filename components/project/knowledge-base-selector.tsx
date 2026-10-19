@@ -6,8 +6,6 @@ import {
   Database,
   Plus,
   Trash2,
-  Layers,
-  Sparkles,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -44,61 +42,61 @@ export function KnowledgeBaseSelector({ projectId }: KnowledgeBaseSelectorProps)
 
   return (
     <>
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 font-mono">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="flex min-w-0 flex-1 items-center justify-between rounded-lg border bg-background/80 px-2.5 py-1.5 text-left text-xs font-medium shadow-xs hover:bg-accent transition-colors"
+              className="flex min-w-0 flex-1 items-center justify-between cyber-chamfer-sm border border-[#2a2a3a] bg-[#12121a] px-2.5 py-1.5 text-left text-xs transition-none hover:border-accent"
             >
               <div className="flex min-w-0 items-center gap-2">
-                <div className="flex size-5 shrink-0 items-center justify-center rounded bg-primary/10 text-primary">
+                <div className="flex size-5 shrink-0 items-center justify-center cyber-chamfer-sm bg-accent text-[#0a0a0f]">
                   <Database className="size-3" />
                 </div>
                 <div className="min-w-0 truncate">
-                  <p className="truncate font-medium text-foreground">
-                    {activeKb ? activeKb.name : "Select Knowledge Base"}
+                  <p className="truncate font-bold uppercase text-foreground">
+                    {activeKb ? activeKb.name : "SELECT_KB"}
                   </p>
                   {activeKb && (
-                    <p className="text-[10px] text-muted-foreground truncate">
-                      {activeKb.chunking_config?.strategy || "recursive"} · {activeKb.document_count || 0} docs
+                    <p className="text-[9px] uppercase text-muted-foreground truncate">
+                      {activeKb.chunking_config?.strategy || "recursive"} · {activeKb.document_count || 0} DOCS
                     </p>
                   )}
                 </div>
               </div>
-              <ChevronDown className="size-3.5 shrink-0 text-muted-foreground ml-1" />
+              <ChevronDown className="size-3.5 shrink-0 text-accent ml-1" />
             </button>
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent align="start" className="w-64">
-            <DropdownMenuLabel className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Knowledge Bases ({knowledgeBases.length})
+          <DropdownMenuContent align="start" className="w-64 font-mono">
+            <DropdownMenuLabel className="text-[10px] font-bold text-accent uppercase tracking-widest">
+              KNOWLEDGE_BASES [{knowledgeBases.length}]
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="bg-[#2a2a3a]" />
 
             {knowledgeBases.length === 0 ? (
-              <div className="p-3 text-center text-xs text-muted-foreground">
-                No knowledge bases created yet.
+              <div className="p-3 text-center text-xs text-muted-foreground uppercase">
+                NO_KB_CONFIGURED
               </div>
             ) : (
               knowledgeBases.map((kb) => (
                 <DropdownMenuItem
                   key={kb.id}
                   onClick={() => selectKnowledgeBase(kb.id)}
-                  className="flex items-center justify-between cursor-pointer py-2"
+                  className="flex items-center justify-between cursor-pointer py-2 font-mono"
                 >
                   <div className="min-w-0 flex-1 mr-2">
-                    <p className={`truncate text-xs ${kb.id === selectedKbId ? "font-semibold text-primary" : ""}`}>
+                    <p className={`truncate text-xs font-bold uppercase ${kb.id === selectedKbId ? "text-accent" : "text-foreground"}`}>
                       {kb.name}
                     </p>
-                    <p className="text-[10px] text-muted-foreground truncate">
-                      {kb.chunking_config?.strategy ?? "recursive"} ({kb.document_count ?? 0} docs)
+                    <p className="text-[9px] text-muted-foreground truncate uppercase">
+                      {kb.chunking_config?.strategy ?? "recursive"} ({kb.document_count ?? 0} DOCS)
                     </p>
                   </div>
                   <button
                     type="button"
                     aria-label={`Delete ${kb.name}`}
-                    className="p-1 rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    className="p-1 text-muted-foreground hover:text-destructive transition-none"
                     onClick={(e) => handleDelete(e, kb.id)}
                   >
                     <Trash2 className="size-3.5" />
@@ -107,12 +105,12 @@ export function KnowledgeBaseSelector({ projectId }: KnowledgeBaseSelectorProps)
               ))
             )}
 
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="bg-[#2a2a3a]" />
             <DropdownMenuItem
               onClick={() => setIsCreateOpen(true)}
-              className="cursor-pointer text-xs font-medium text-primary flex items-center gap-1.5"
+              className="cursor-pointer text-xs font-bold text-accent uppercase flex items-center gap-1.5"
             >
-              <Plus className="size-3.5" /> New Knowledge Base
+              <Plus className="size-3.5" /> NEW_KNOWLEDGE_BASE
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -122,7 +120,7 @@ export function KnowledgeBaseSelector({ projectId }: KnowledgeBaseSelectorProps)
           variant="outline"
           title="Create New Knowledge Base"
           onClick={() => setIsCreateOpen(true)}
-          className="shrink-0"
+          className="shrink-0 h-8 w-8"
         >
           <Plus className="size-3.5" />
         </Button>
