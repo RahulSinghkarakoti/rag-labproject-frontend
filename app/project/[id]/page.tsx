@@ -23,7 +23,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   useEffect(() => { void fetchThreads(id); }, [fetchThreads, id]);
 
   return (
-    <div className="flex h-svh min-w-[1100px] overflow-hidden bg-[#0a0a0f] text-[#e0e0e0] font-mono">
+    <div className="flex h-full min-w-[1100px] overflow-hidden bg-[#0a0a0f] text-[#e0e0e0] font-mono">
         <div className="flex min-h-0 w-80 shrink-0 flex-col border-r border-[#2a2a3a] bg-[#0a0a0f]">
           <div className="flex border-b border-[#2a2a3a] px-3 pt-3 bg-[#12121a]">
             <button

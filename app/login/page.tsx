@@ -53,7 +53,7 @@ export default async function LoginPage({
     "flex w-full items-center justify-center gap-3 cyber-chamfer-sm border border-accent bg-transparent px-4 py-3 font-mono text-xs font-bold uppercase tracking-wider text-accent transition-none hover:bg-accent hover:text-accent-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
   return (
-    <main className="flex min-h-svh items-center justify-center bg-[#0a0a0f] p-4 text-[#e0e0e0]">
+    <main className="flex min-h-full items-center justify-center bg-[#0a0a0f] p-4 text-[#e0e0e0]">
       <div className="w-full max-w-md cyber-chamfer border border-[#2a2a3a] bg-[#12121a] p-8 shadow-2xl font-mono">
         <div className="mb-6 border-b border-[#2a2a3a] pb-4 flex items-start justify-between gap-4">
           <div>

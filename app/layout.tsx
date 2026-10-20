@@ -18,11 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="scanlines font-mono bg-background text-foreground antialiased selection:bg-accent selection:text-[#0a0a0f]">
-        <div className="flex h-screen flex-col">
+        <div className="flex h-svh w-full flex-col overflow-hidden">
           <SessionProvider>
             <AuthSessionHandler>
               <ThemeAccentProvider>
-                <main className="flex-1 overflow-hidden">{children}</main>
+                <main className="flex-1 min-h-0 overflow-y-auto">{children}</main>
               </ThemeAccentProvider>
             </AuthSessionHandler>
           </SessionProvider>
