@@ -33,8 +33,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
         error: "/login",
     },
     callbacks: {
-        async jwt({ token, user, account, trigger }) {
-            /* * FIRST LOGIN*/
+        async signIn({ user, account, profile }) {
             if (account && user) {
                 try {
                     const response = await fetch(
@@ -56,27 +55,40 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
                         }
                     );
                     if (!response.ok) {
-                        // Returning null clears the JWT cookie (no sticky error session).
-                        return null;
+                        if (response.status === 400) {
+                            return "/login?error=OAuthAccountNotLinked";
+                        }
+                        return false;
                     }
                     const parsedResponse = await response.json();
                     const data = parsedResponse.data ?? parsedResponse;
                     if (!data.access_token || !data.refresh_token) {
-                        return null;
+                        return false;
                     }
-                    return {
-                        ...token,
-                        user: data.user,
-                        accessToken: data.access_token,
-                        refreshToken: data.refresh_token,
-                        accessTokenExpires:
-                            Date.now() + 15 * 60 * 1000,
-                        error: undefined,
-                    };
+                    // Pass the fetched tokens to the jwt callback
+                    (account as any).backendTokens = data;
+                    return true;
                 } catch (err) {
-                    console.error("OAuth Exchange Error:", err);
-                    return null;
+                    console.error("OAuth SignIn Error:", err);
+                    return false;
                 }
+            }
+            return true;
+        },
+        async jwt({ token, user, account, trigger }) {
+            /* * FIRST LOGIN*/
+            if (account && user) {
+                const data = (account as any).backendTokens;
+                if (!data) return null;
+                return {
+                    ...token,
+                    user: data.user,
+                    accessToken: data.access_token,
+                    refreshToken: data.refresh_token,
+                    accessTokenExpires:
+                        Date.now() + 15 * 60 * 1000,
+                    error: undefined,
+                };
             }
 
             // Keep auth refresh failures as explicit session errors so we can

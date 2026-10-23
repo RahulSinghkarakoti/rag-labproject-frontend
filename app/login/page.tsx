@@ -27,7 +27,7 @@ function GoogleIcon() {
 
 const errorMessages: Record<string, string> = {
   OAuthAccountNotLinked:
-    "This email is already linked to another sign-in method. Use the provider you signed up with.",
+    "An account with this email already exists. Please log in with your original provider.",
   AccessDenied: "Access denied. You don't have permission to sign in.",
   Configuration: "Auth is misconfigured. Check your environment variables.",
 };

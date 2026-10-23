@@ -10,8 +10,8 @@ import {
 } from "@assistant-ui/react-markdown";
 import remarkGfm from "remark-gfm";
 import { type FC, memo, useMemo, useRef } from "react";
-import type { TextMessagePartProps } from "@assistant-ui/react";
-import { CheckIcon, CopyIcon } from "lucide-react";
+import { useAuiState, type TextMessagePartProps } from "@assistant-ui/react";
+import { CheckIcon, CopyIcon, FileIcon } from "lucide-react";
 
 import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-icon-button";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
@@ -133,17 +133,27 @@ const defaultComponents = memoizeMarkdownComponents({
       {...props}
     />
   ),
-  a: ({ className, href, children, ...props }) => {
-    if (href?.startsWith("#citation-")) {
+  a: function Anchor({ className, href, children, ...props }) {
+    const isCitation = href?.startsWith("#citation-");
+    
+    // Always call hook unconditionally
+    const message = useAuiState((s) => s.message);
+
+    if (isCitation) {
       const docNum = href.replace("#citation-", "");
+      const citations = (message?.metadata?.citations as Array<{ index: number, name: string, mime_type: string }>) || [];
+      const citation = citations.find((c) => c.index.toString() === docNum);
+      const displayName = citation?.name || docNum;
+
       return (
         <a
           href={href}
-          className="inline-flex items-center mx-0.5 px-1.5 py-0.5 align-baseline cyber-chamfer-sm text-[10px] font-mono font-bold bg-accent/10 text-accent hover:bg-accent/20 border border-accent/40 transition-none no-underline select-none"
-          title={`Source document ${docNum}`}
+          className="inline-flex items-center mx-0.5 px-1.5 py-0.5 gap-1 align-baseline cyber-chamfer-sm text-[10px] font-mono font-bold bg-accent/10 text-accent hover:bg-accent/20 border border-accent/40 transition-none no-underline select-none"
+          title={`Source document ${docNum}${citation ? `: ${citation.name}` : ''}`}
           {...props}
         >
-          [{children}]
+          <FileIcon className="w-3 h-3 flex-shrink-0" />
+          <span className="max-w-[150px] truncate">{displayName}</span>
         </a>
       );
     }
@@ -155,7 +165,9 @@ const defaultComponents = memoizeMarkdownComponents({
         )}
         href={href}
         {...props}
-      />
+      >
+        {children}
+      </a>
     );
   },
   blockquote: ({ className, ...props }) => (
