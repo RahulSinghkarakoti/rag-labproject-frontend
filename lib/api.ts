@@ -11,6 +11,18 @@ export interface ApiResponse<T = unknown> {
   };
 }
 
+let cachedSession: any = null;
+let cachedSessionExpiry = 0;
+
+export async function getCachedSession(forceRefresh = false) {
+  if (!forceRefresh && cachedSession && Date.now() < cachedSessionExpiry) {
+    return cachedSession;
+  }
+  cachedSession = await getSession();
+  cachedSessionExpiry = Date.now() + 60000; // cache for 1 minute
+  return cachedSession;
+}
+
 const client = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000",
   withCredentials: true,
@@ -23,6 +35,7 @@ let redirectingToLogin = false;
 async function forceLogin() {
   if (typeof window === "undefined" || redirectingToLogin) return;
   redirectingToLogin = true;
+  cachedSessionExpiry = 0;
   try {
     await signOut({ callbackUrl: "/login" });
   } catch {
@@ -47,7 +60,7 @@ function refreshSession() {
 }
 
 client.interceptors.request.use(async (config) => {
-  const session = (await getSession()) as (Awaited<ReturnType<typeof getSession>> & {
+  const session = (await getCachedSession()) as (Awaited<ReturnType<typeof getSession>> & {
     accessToken?: string;
     error?: string;
   }) | null;
@@ -74,12 +87,13 @@ client.interceptors.response.use(undefined, async (error) => {
   config._retry = true;
   try {
     await refreshSession();
+    cachedSessionExpiry = 0; // force refresh
   } catch {
     await forceLogin();
     return Promise.reject(error);
   }
 
-  const refreshed = (await getSession()) as (Awaited<ReturnType<typeof getSession>> & {
+  const refreshed = (await getCachedSession(true)) as (Awaited<ReturnType<typeof getSession>> & {
     accessToken?: string;
     error?: string;
   }) | null;

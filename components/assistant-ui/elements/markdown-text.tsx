@@ -139,9 +139,9 @@ const defaultComponents = memoizeMarkdownComponents({
     // Always call hook unconditionally
     const message = useAuiState((s) => s.message);
 
-    if (isCitation) {
+    if (isCitation && href) {
       const docNum = href.replace("#citation-", "");
-      const citations = (message?.metadata?.citations as Array<{ index: number, name: string, mime_type: string }>) || [];
+      const citations = ((message as any)?.metadata?.citations as Array<{ index: number, name: string, mime_type: string }>) || [];
       const citation = citations.find((c) => c.index.toString() === docNum);
       const displayName = citation?.name || docNum;
 

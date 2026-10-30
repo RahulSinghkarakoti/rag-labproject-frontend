@@ -163,7 +163,11 @@ function RuntimeInner({
           .map((line) => line.slice(5).trimStart())
           .join("\n");
         if (!data || data === "[DONE]") return { event, payload: null };
-        return { event, payload: JSON.parse(data) as Record<string, unknown> };
+        try {
+          return { event, payload: JSON.parse(data) as Record<string, unknown> };
+        } catch {
+          return { event, payload: null };
+        }
       };
 
       const onAbort = () => {

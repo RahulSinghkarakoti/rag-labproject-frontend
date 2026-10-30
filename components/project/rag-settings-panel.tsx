@@ -130,6 +130,7 @@ const DENSE_MODELS = [
 type FieldInfo = {
   description: string;
   whenToUse: string;
+  consequences?: string;
 };
 
 function FieldInfoButton({ label, info }: { label: string; info?: FieldInfo }) {
@@ -160,9 +161,17 @@ function FieldInfoButton({ label, info }: { label: string; info?: FieldInfo }) {
           <DialogTitle className="text-accent uppercase tracking-wider">&gt; {label}</DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">{info.description}</DialogDescription>
         </DialogHeader>
-        <div className="cyber-chamfer-sm border border-[#2a2a3a] bg-[#0a0a0f] p-3 text-xs text-muted-foreground">
-          <span className="font-bold text-accent uppercase">WHEN_TO_USE: </span>
-          {info.whenToUse}
+        <div className="cyber-chamfer-sm border border-[#2a2a3a] p-3 space-y-2 mt-2 bg-[#0a0a0f]">
+          <div className="flex flex-col">
+            <span className="text-accent text-[10px] font-bold uppercase tracking-wider mb-1">When to Use</span>
+            <span className="text-[11px] text-muted-foreground leading-relaxed">{info.whenToUse}</span>
+          </div>
+          {info.consequences && (
+            <div className="flex flex-col mt-2 border-t border-red-900/30 pt-2">
+              <span className="text-red-400 text-[10px] font-bold uppercase tracking-wider mb-1">Warning / Consequence</span>
+              <span className="text-red-200/70 text-[11px] leading-relaxed">{info.consequences}</span>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
@@ -557,7 +566,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   value: m.value,
                   label: m.label,
                 }))}
-                info={{ description: "Chooses how the user's question is prepared before retrieval.", whenToUse: "Keep None for straightforward questions; use Rewrite for follow-ups, HyDE or Multi-Query when recall is more important than latency, and Step-Back or Sub-Queries for complex questions." }}
+                info={{ description: "Chooses how the user's question is prepared before retrieval.", whenToUse: "Keep None for straightforward questions; use Rewrite for follow-ups, HyDE or Multi-Query when recall is more important than latency, and Step-Back or Sub-Queries for complex questions.", consequences: "HyDE can hallucinate if terminology is highly proprietary. Sub-queries can over-segment questions, losing semantic context and returning empty results." }}
                 onChange={(mode) =>
                   updateSection("query_transformation", {
                     mode: mode as QueryTransformationMode,
@@ -768,7 +777,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                     min={1}
                     max={200}
                     hint="1 - 200"
-                    info={{ description: "Maximum passages kept after reranking.", whenToUse: "Final context count." }}
+                    info={{ description: "Maximum passages kept after reranking.", whenToUse: "Final context count.", consequences: "Setting this too low (e.g. 1 or 2) starves the LLM of necessary context, forcing hallucinations or incomplete answers." }}
                     onChange={(top_n) =>
                       updateSection("reranking", {
                         top_n: Math.min(200, Math.max(1, top_n)),
@@ -845,7 +854,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
                   max={2.0}
                   step={0.05}
                   hint="0.0 - 2.0"
-                  info={{ description: "Controls output randomness.", whenToUse: "Keep low for grounded RAG." }}
+                  info={{ description: "Controls output randomness.", whenToUse: "Keep low for grounded RAG.", consequences: "High temperature (> 0.7) in RAG makes the model highly creative, causing it to ignore retrieved documents and hallucinate." }}
                   onChange={(temperature) =>
                     updateSection("generation", {
                       temperature: Math.min(2.0, Math.max(0.0, temperature)),
@@ -871,7 +880,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
               <ToggleRow
                 label="Enforce Citations"
                 description="Require grounded citations in response"
-                info={{ description: "Requires answer to cite source passages.", whenToUse: "Enable for verifiable RAG outputs." }}
+                info={{ description: "Requires answer to cite source passages.", whenToUse: "Enable for verifiable RAG outputs.", consequences: "If retrieved documents are only tangentially related, enforcing citations will force the model to stubbornly refuse to answer." }}
                 checked={values.generation.citation_enforced}
                 onChange={(citation_enforced) =>
                   updateSection("generation", { citation_enforced })

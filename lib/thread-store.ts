@@ -33,6 +33,15 @@ type ThreadStore = {
 
 const message = (error: unknown) => (error instanceof Error ? error.message : "Request failed");
 const configTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const pendingSaves = new Map<string, () => void>();
+
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", () => {
+    for (const save of pendingSaves.values()) {
+      save();
+    }
+  });
+}
 
 export const useThreadStore = create<ThreadStore>((set, get) => ({
   threads: [],
@@ -134,7 +143,8 @@ export const useThreadStore = create<ThreadStore>((set, get) => ({
     }));
     const previousTimer = configTimers.get(threadId);
     if (previousTimer) clearTimeout(previousTimer);
-    configTimers.set(threadId, setTimeout(async () => {
+    
+    const saveFn = async () => {
       try {
         set({ status: "saving", error: null });
         const updated = await threadApi.update(threadId, { config });
@@ -148,8 +158,12 @@ export const useThreadStore = create<ThreadStore>((set, get) => ({
         set({ status: "error", error: message(error) });
       } finally {
         configTimers.delete(threadId);
+        pendingSaves.delete(threadId);
       }
-    }, 500));
+    };
+    
+    pendingSaves.set(threadId, saveFn);
+    configTimers.set(threadId, setTimeout(saveFn, 500));
   },
   refreshThreadConfig: async (threadId) => {
     const generation = (get().refreshGenerations[threadId] ?? 0) + 1;

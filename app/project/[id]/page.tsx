@@ -16,6 +16,9 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const knowledgeBases = useKnowledgeBaseStore((state) => state.knowledgeBases);
   const fetchThreads = useThreadStore((state) => state.fetchThreads);
   const [leftTab, setLeftTab] = useState<"documents" | "threads">("documents");
+  const [leftPanelVisible, setLeftPanelVisible] = useState(true);
+  const [rightPanelVisible, setRightPanelVisible] = useState(true);
+
   const projectName = id.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
   const chatEnabled = Boolean(selectedThreadId);
   const canCreateThread = knowledgeBases.some((kb) => kb.document_count > 0);
@@ -23,41 +26,49 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   useEffect(() => { void fetchThreads(id); }, [fetchThreads, id]);
 
   return (
-    <div className="flex h-full min-w-[1100px] overflow-hidden bg-[#0a0a0f] text-[#e0e0e0] font-mono">
-        <div className="flex min-h-0 w-80 shrink-0 flex-col border-r border-[#2a2a3a] bg-[#0a0a0f]">
-          <div className="flex border-b border-[#2a2a3a] px-3 pt-3 bg-[#12121a]">
-            <button
-              type="button"
-              onClick={() => setLeftTab("documents")}
-              className={`flex-1 border-b-2 pb-2 text-xs font-bold uppercase tracking-wider transition-none ${
-                leftTab === "documents"
-                  ? "border-accent text-accent"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              [ DOCS ]
-            </button>
-            <button
-              type="button"
-              onClick={() => setLeftTab("threads")}
-              className={`flex-1 border-b-2 pb-2 text-xs font-bold uppercase tracking-wider transition-none ${
-                leftTab === "threads"
-                  ? "border-accent text-accent"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              [ THREADS ]
-            </button>
+    <div className="flex h-full min-w-0 overflow-hidden bg-[#0a0a0f] text-[#e0e0e0] font-mono">
+        {leftPanelVisible && (
+          <div className="flex min-h-0 w-80 shrink-0 flex-col border-r border-[#2a2a3a] bg-[#0a0a0f]">
+            <div className="flex border-b border-[#2a2a3a] px-3 pt-3 bg-[#12121a]">
+              <button
+                type="button"
+                onClick={() => setLeftTab("documents")}
+                className={`flex-1 border-b-2 pb-2 text-xs font-bold uppercase tracking-wider transition-none ${
+                  leftTab === "documents"
+                    ? "border-accent text-accent"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                [ DOCS ]
+              </button>
+              <button
+                type="button"
+                onClick={() => setLeftTab("threads")}
+                className={`flex-1 border-b-2 pb-2 text-xs font-bold uppercase tracking-wider transition-none ${
+                  leftTab === "threads"
+                    ? "border-accent text-accent"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                [ THREADS ]
+              </button>
+            </div>
+            {leftTab === "documents" ? <DocumentsPanel projectId={id} projectName={projectName} /> : <ThreadPanel projectId={id} canCreate={canCreateThread} />}
           </div>
-          {leftTab === "documents" ? <DocumentsPanel projectId={id} projectName={projectName} /> : <ThreadPanel projectId={id} canCreate={canCreateThread} />}
-        </div>
+        )}
         <div className="flex min-h-0 min-w-0 flex-1 bg-[#0a0a0f]">
           <MyRuntimeProvider
             key={selectedThreadId ?? "new-thread"}
             threadId={selectedThreadId}
           >
-            <ProjectChat enabled={chatEnabled} />
-            {selectedThreadId ? (
+            <ProjectChat 
+              enabled={chatEnabled} 
+              leftPanelOpen={leftPanelVisible}
+              rightPanelOpen={rightPanelVisible}
+              onToggleLeftPanel={() => setLeftPanelVisible(!leftPanelVisible)}
+              onToggleRightPanel={() => setRightPanelVisible(!rightPanelVisible)}
+            />
+            {selectedThreadId && rightPanelVisible ? (
               <RagSettingsPanel threadId={selectedThreadId} />
             ) : null}
           </MyRuntimeProvider>

@@ -1,8 +1,7 @@
-import { api } from "@/lib/api";
+import { api, getCachedSession } from "@/lib/api";
 import type { ThreadConfig } from "@/lib/config-store";
 import type { KnowledgeBase } from "@/lib/store";
 import { threadConfigSchema } from "@/lib/schemas/thread-config";
-import { getSession } from "next-auth/react";
 
 type ThreadMetadata = Partial<ThreadConfig> & {
   config?: ThreadConfig;
@@ -47,7 +46,7 @@ export type SendThreadMessageInput = {
 };
 
 async function streamThreadMessage(path: string, content?: string, signal?: AbortSignal) {
-  const session = (await getSession()) as { accessToken?: string } | null;
+  const session = (await getCachedSession()) as { accessToken?: string } | null;
   const response = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}${path}`,
     {
@@ -94,12 +93,13 @@ export type RunStep = {
   step_type: string;
   sequence: number;
   status: string;
-  input?: Record<string, any> | null;
-  output?: Record<string, any> | null;
-  error?: Record<string, any> | null;
+  input?: any;
+  output?: any;
+  config?: any;
+  error?: any;
   started_at?: string | null;
   completed_at?: string | null;
-  metadata?: Record<string, any>;
+  metadata?: any;
 };
 
 export type RunDetails = {
