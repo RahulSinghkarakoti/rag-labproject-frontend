@@ -26,6 +26,7 @@ export type ChunkingConfig = {
 
 export type EmbeddingConfig = {
   model: string;
+  provider?: string;
   // dimension?: number;
 };
 
@@ -83,10 +84,13 @@ type ProjectInput = Omit<Project, "id">;
 
 type ProjectStore = {
   projects: Project[];
+  currentProject: Project | null;
   selectedProjectId: string | null;
   status: "idle" | "loading" | "saving" | "updating" | "deleting" | "error";
   error: string | null;
   fetchProjects: () => Promise<void>;
+  fetchProject: (id: string) => Promise<Project>;
+  setCurrentProject: (project: Project | null) => void;
   createProject: (input: ProjectInput) => Promise<Project>;
   updateProject: (input: ProjectInput, project_id: string) => Promise<Project>;
   deleteProject: (project_id: string) => Promise<void>;
@@ -123,6 +127,7 @@ type DocumentStore = {
 
 export const useProjectStore = create<ProjectStore>((set) => ({
   projects: [],
+  currentProject: null,
   selectedProjectId: null,
   status: "idle",
   error: null,
@@ -137,6 +142,20 @@ export const useProjectStore = create<ProjectStore>((set) => ({
       throw error;
     }
   },
+
+  fetchProject: async (id: string) => {
+    set({ status: "loading", error: null });
+    try {
+      const project = await api.get<Project>(`/api/projects/${id}`);
+      set({ currentProject: project, status: "idle" });
+      return project;
+    } catch (error) {
+      set({ status: "error", error: error instanceof Error ? error.message : "Request failed" });
+      throw error;
+    }
+  },
+
+  setCurrentProject: (currentProject) => set({ currentProject }),
 
   createProject: async (input) => {
     set({ status: "saving", error: null });

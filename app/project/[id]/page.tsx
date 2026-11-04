@@ -6,7 +6,7 @@ import { DocumentsPanel } from "@/components/project/documents-panel";
 import { ProjectChat } from "@/components/project/project-chat";
 import { RagSettingsPanel } from "@/components/project/rag-settings-panel";
 import { ThreadPanel } from "@/components/project/thread-panel";
-import { useKnowledgeBaseStore } from "@/lib/store";
+import { useKnowledgeBaseStore, useProjectStore } from "@/lib/store";
 import { useThreadStore } from "@/lib/thread-store";
 import { MyRuntimeProvider } from "../../MyRuntimeProvider";
 
@@ -15,15 +15,39 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const selectedThreadId = useThreadStore((state) => state.selectedThreadId);
   const knowledgeBases = useKnowledgeBaseStore((state) => state.knowledgeBases);
   const fetchThreads = useThreadStore((state) => state.fetchThreads);
+  const createThread = useThreadStore((state) => state.createThread);
+  const currentProject = useProjectStore((state) => state.currentProject);
+  const fetchProject = useProjectStore((state) => state.fetchProject);
+
   const [leftTab, setLeftTab] = useState<"documents" | "threads">("documents");
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
   const [rightPanelVisible, setRightPanelVisible] = useState(true);
+  const [isQuickCreating, setIsQuickCreating] = useState(false);
 
-  const projectName = id.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  const projectName = currentProject?.id === id ? currentProject.name : "PROJECT";
   const chatEnabled = Boolean(selectedThreadId);
-  const canCreateThread = knowledgeBases.some((kb) => kb.document_count > 0);
+  const readyKbs = knowledgeBases.filter((kb) => kb.document_count > 0);
+  const canCreateThread = readyKbs.length > 0;
+  const canShowSettings = leftTab === "threads" && Boolean(selectedThreadId);
+  const isSettingsPanelVisible = canShowSettings && rightPanelVisible;
 
-  useEffect(() => { void fetchThreads(id); }, [fetchThreads, id]);
+  useEffect(() => {
+    void fetchProject(id).catch(() => undefined);
+    void fetchThreads(id);
+  }, [fetchProject, fetchThreads, id]);
+
+  const handleQuickCreateThread = async () => {
+    if (!canCreateThread || isQuickCreating) return;
+    setIsQuickCreating(true);
+    try {
+      const kbIds = readyKbs.map((kb) => kb.id);
+      await createThread(id, kbIds, "Default Session");
+    } catch {
+      // Handled by store
+    } finally {
+      setIsQuickCreating(false);
+    }
+  };
 
   return (
     <div className="flex h-full min-w-0 overflow-hidden bg-[#0a0a0f] text-[#e0e0e0] font-mono">
@@ -64,11 +88,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             <ProjectChat 
               enabled={chatEnabled} 
               leftPanelOpen={leftPanelVisible}
-              rightPanelOpen={rightPanelVisible}
+              rightPanelOpen={isSettingsPanelVisible}
+              canCreateThread={canCreateThread}
+              isCreatingThread={isQuickCreating}
+              onQuickCreateThread={handleQuickCreateThread}
               onToggleLeftPanel={() => setLeftPanelVisible(!leftPanelVisible)}
-              onToggleRightPanel={() => setRightPanelVisible(!rightPanelVisible)}
+              onToggleRightPanel={canShowSettings ? () => setRightPanelVisible(!rightPanelVisible) : undefined}
             />
-            {selectedThreadId && rightPanelVisible ? (
+            {isSettingsPanelVisible && selectedThreadId ? (
               <RagSettingsPanel threadId={selectedThreadId} />
             ) : null}
           </MyRuntimeProvider>

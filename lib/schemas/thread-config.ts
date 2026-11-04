@@ -21,8 +21,7 @@ export const queryTransformationConfigSchema = z
     query_count: z.number().int().min(1).max(10).default(3),
     include_original: z.boolean().default(true),
     prompt_template: z.string().nullable().optional().default(null),
-  })
-  .strict(); 
+  }); 
 
 export const retrievalConfigSchema = z
   .object({
@@ -34,8 +33,7 @@ export const retrievalConfigSchema = z
     mmr_lambda: z.number().min(0.0).max(1.0).default(0.5),
     sparse_model: z.string().min(1).default("bm25"),
     dense_model: z.string().min(1).default("all-MiniLM-L6-v2"),
-  })
-  .strict();
+  });
 
 export const rerankingConfigSchema = z
   .object({
@@ -46,8 +44,7 @@ export const rerankingConfigSchema = z
     batch_size: z.number().int().min(1).max(256).default(16),
     score_threshold: z.number().nullable().default(null),
     return_documents: z.boolean().default(true),
-  })
-  .strict();
+  });
 
 export const generationConfigSchema = z
   .object({
@@ -57,8 +54,7 @@ export const generationConfigSchema = z
     temperature: z.number().min(0.0).max(2.0).default(0.2),
     max_tokens: z.number().int().min(1).max(32000).default(1000),
     citation_enforced: z.boolean().default(false),
-  })
-  .strict();
+  });
 
 export const threadConfigSchema = z
   .object({
@@ -66,8 +62,7 @@ export const threadConfigSchema = z
     retrieval: retrievalConfigSchema,
     reranking: rerankingConfigSchema,
     generation: generationConfigSchema,
-  })
-  .strict();
+  });
 
 export type QueryTransformationMode = z.infer<typeof queryTransformationModeSchema>;
 export type LLMProvider = z.infer<typeof llmProviderSchema>;

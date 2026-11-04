@@ -94,16 +94,18 @@ export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) 
     });
 
     if (sseEvent.status === "completed" || sseEvent.status === "failed") {
+      void fetchKnowledgeBases(projectId).catch(() => undefined);
       if (isTrackedUpload) {
         trackedDocumentIdsRef.current.delete(sseEvent.document_id);
-        if (selectedKbId) void fetchDocuments(projectId, selectedKbId);
+        if (selectedKbId) void fetchDocuments(projectId, selectedKbId).catch(() => undefined);
         if (trackedDocumentIdsRef.current.size === 0) disconnectSse();
       }
     }
-  }, [sseEvent, applySSEStatusUpdate, fetchDocuments, projectId, selectedKbId, disconnectSse]);
+  }, [sseEvent, applySSEStatusUpdate, fetchDocuments, fetchKnowledgeBases, projectId, selectedKbId, disconnectSse]);
 
   useEffect(() => {
     if (previousSseStatusRef.current === "CONNECTED" && sseStatus === "DISCONNECTED" && selectedKbId && trackedDocumentIdsRef.current.size > 0) {
+      void fetchKnowledgeBases(projectId).catch(() => undefined);
       void fetchDocuments(projectId, selectedKbId).then((docs) => {
         for (const document of docs) {
           if ((document.status === "completed" || document.status === "failed") && trackedDocumentIdsRef.current.has(document.id)) {
@@ -111,22 +113,25 @@ export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) 
           }
         }
         if (trackedDocumentIdsRef.current.size === 0) disconnectSse();
-      });
+      }).catch(() => undefined);
     }
     previousSseStatusRef.current = sseStatus;
-  }, [sseStatus, projectId, selectedKbId, fetchDocuments]);
+  }, [sseStatus, projectId, selectedKbId, fetchDocuments, fetchKnowledgeBases, disconnectSse]);
 
   useEffect(() => {
     if (projectId) {
-      fetchKnowledgeBases(projectId);
+      void fetchKnowledgeBases(projectId).catch(() => undefined);
     }
   }, [projectId, fetchKnowledgeBases]);
 
   useEffect(() => {
     if (projectId && selectedKbId) {
-      fetchDocuments(projectId, selectedKbId);
+      const isValidKb = knowledgeBases.some((kb) => kb.id === selectedKbId);
+      if (isValidKb) {
+        void fetchDocuments(projectId, selectedKbId).catch(() => undefined);
+      }
     }
-  }, [projectId, selectedKbId, fetchDocuments]);
+  }, [projectId, selectedKbId, knowledgeBases, fetchDocuments]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;

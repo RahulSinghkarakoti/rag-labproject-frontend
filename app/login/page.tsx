@@ -46,7 +46,7 @@ export default async function LoginPage({
 
   async function loginWith(provider: "google" | "github") {
     "use server";
-    await signIn(provider, { redirectTo: callbackUrl });
+    await signIn(provider, { redirectTo:  callbackUrl || "/" });
   }
 
   const buttonClass =
@@ -92,7 +92,7 @@ export default async function LoginPage({
         </div>
 
         <div className="mt-8 border-t border-[#2a2a3a] pt-4 text-center text-[10px] text-muted-foreground uppercase tracking-wider">
-          &gt; SECURE PROTOCOL ENFORCED  
+          &gt; SECURE PROTOCOL ENFORCED
         </div>
       </div>
     </main>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Brain,
   ChevronDown,
@@ -46,7 +46,9 @@ import {
   useThreadConfigStore,
   type ProjectConfig,
   type DocumentItem,
+  type KnowledgeBase,
 } from "@/lib/store";
+import { KbDetailsDialog } from "@/components/project/kb-details-dialog";
 import type {
   GenerationConfig,
   LLMProvider,
@@ -122,9 +124,8 @@ const RETRIEVAL_STRATEGIES = [
 ];
 
 const DENSE_MODELS = [
-  { value: "text-embedding-3-small", label: "text-embedding-3-small" },
-  { value: "text-embedding-3-large", label: "text-embedding-3-large" },
-  { value: "all-MiniLM-L6-v2", label: "all-MiniLM-L6-v2" },
+  { value: "BAAI/bge-large-en-v1.5", label: "BAAI/bge-large-en-v1.5 (1024d)" },
+  { value: "all-MiniLM-L6-v2", label: "all-MiniLM-L6-v2 (384d)" },
 ];
 
 type FieldInfo = {
@@ -192,7 +193,7 @@ function FieldLabel({ label, hint, info }: { label: string; hint?: string; info?
 
 const RERANKER_MODELS = [
   { value: "BAAI/bge-reranker-base", label: "BAAI/bge-reranker-base" },
-  { value: "bge-reranker-large", label: "bge-reranker-large" },
+  { value: "BAAI/bge-reranker-large", label: "BAAI/bge-reranker-large" },
 ];
 
 function SelectField({
@@ -210,6 +211,12 @@ function SelectField({
   hint?: string;
   info?: FieldInfo;
 }) {
+  const resolvedOptions = options.some((o) => o.value === value)
+    ? options
+    : value
+      ? [...options, { value, label: value }]
+      : options;
+
   return (
     <div className="grid gap-1.5 text-xs font-mono font-medium text-muted-foreground">
       <FieldLabel label={label} hint={hint} info={info} />
@@ -219,7 +226,7 @@ function SelectField({
         onChange={(event) => onChange(event.target.value)}
         className="h-8 w-full bg-[#0a0a0f] border border-[#2a2a3a] cyber-chamfer-sm px-2.5 text-xs font-mono text-foreground outline-none focus:border-accent"
       >
-        {options.map((option) => (
+        {resolvedOptions.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
@@ -388,6 +395,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
 
   const [threadDocuments, setThreadDocuments] = useState<Record<string, DocumentItem[]>>({});
   const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [selectedInspectKb, setSelectedInspectKb] = useState<KnowledgeBase | null>(null);
 
   useEffect(() => {
     if (!openSections.knowledge_bases || !thread?.knowledge_bases?.length) return;
@@ -460,23 +468,36 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
     (m) => m.value === values.query_transformation.mode
   );
 
+  const readyAttachedKbs = useMemo(() => {
+    if (!thread?.knowledge_bases) return [];
+    return thread.knowledge_bases
+      .map((kb) => knowledgeBases.find((k) => k.id === kb.id) ?? kb)
+      .filter((kb) => {
+        const docCount = threadDocuments[kb.id]?.length ?? kb.document_count ?? 0;
+        return docCount > 0;
+      });
+  }, [thread?.knowledge_bases, knowledgeBases, threadDocuments]);
+
   return (
     <aside
       className={`flex min-h-0 shrink-0 flex-col border-l border-[#2a2a3a] bg-[#0a0a0f] font-mono transition-none ${isPanelExpanded ? "w-[440px]" : "w-80"
         }`}
     >
       {/* Top Header */}
-      <div className="flex items-center justify-between border-b border-[#2a2a3a] px-4 py-3.5 bg-[#12121a]">
-        <div>
+      <div className="flex items-center justify-between border-b border-[#2a2a3a] px-4 py-3 bg-[#12121a]">
+        <div className="min-w-0 flex-1 mr-2">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
-            <SlidersHorizontal className="size-4 text-accent" />
-            <span>&gt; RAG_CONFIG_PANEL</span>
+            <SlidersHorizontal className="size-4 text-accent shrink-0" />
+            <span className="truncate">&gt; THREAD_CONFIG</span>
           </div>
-          <p className="mt-0.5 text-[10px] text-muted-foreground uppercase">
-            Execution parameters &amp; tuning
-          </p>
+          <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-accent font-bold truncate">
+            <span className="text-muted-foreground uppercase shrink-0">SESSION:</span>
+            <span className="truncate" title={thread?.title ?? "UNTITLED_THREAD"}>
+              {thread?.title ?? "UNTITLED_THREAD"}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <Button
             variant="ghost"
             size="icon-xs"
@@ -508,48 +529,102 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
 
       {/* Main Body */}
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
-        <SectionAccordion
-          title="KNOWLEDGE_BASES"
-          badge={`${thread?.knowledge_bases?.length ?? 0}`}
-          icon={<Database className="size-3.5" />}
-          isOpen={openSections.knowledge_bases}
-          onToggle={() => toggleSection("knowledge_bases")}
-        >
-          {!thread?.knowledge_bases?.length ? (
-            <p className="text-[10px] uppercase text-muted-foreground">NO_ATTACHED_KNOWLEDGE_BASES</p>
-          ) : documentsLoading ? (
-            <p className="text-[10px] uppercase text-muted-foreground">LOADING_DOCUMENTS...</p>
-          ) : (
-            <div className="space-y-2">
-              {thread.knowledge_bases.map((kb) => {
-                const kbDocuments = threadDocuments[kb.id] ?? [];
-                return (
-                  <div key={kb.id} className="cyber-chamfer-sm border border-[#2a2a3a] bg-[#12121a] px-2.5 py-2">
-                    <div className="flex items-center justify-between gap-2 font-bold uppercase text-xs">
-                      <span className="truncate text-foreground">{kb.name}</span>
-                      <span className="shrink-0 text-[9px] text-accent">{kbDocuments.length} DOCS</span>
-                    </div>
-                    {kbDocuments.length ? (
-                      <div className="mt-1.5 space-y-1 border-t border-[#2a2a3a] pt-1.5">
-                        {kbDocuments.map((document) => (
-                          <div key={document.id} className="flex min-w-0 items-center gap-1.5 text-[9px] text-muted-foreground">
-                            <FileText className="size-3 shrink-0 text-accent" />
-                            <span className="truncate">{document.name}</span>
-                            <span className="ml-auto shrink-0 uppercase">{document.status}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="mt-1 text-[9px] uppercase text-muted-foreground">NO_DOCUMENTS</p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </SectionAccordion>
+        {readyAttachedKbs.length > 0 && (
+          <SectionAccordion
+            title="KNOWLEDGE_BASES"
+            badge={`${readyAttachedKbs.length}`}
+            icon={<Database className="size-3.5" />}
+            isOpen={openSections.knowledge_bases}
+            onToggle={() => toggleSection("knowledge_bases")}
+          >
+            {documentsLoading ? (
+              <p className="text-[10px] uppercase text-muted-foreground">LOADING_DOCUMENTS...</p>
+            ) : (
+              <div className="space-y-2">
+                {readyAttachedKbs.map((kb) => {
+                  const kbDocuments = threadDocuments[kb.id] ?? [];
+                  const chunkStrategy = kb.chunking_config?.strategy ?? "recursive";
+                  const chunkSize = kb.chunking_config?.chunk_size ?? 512;
+                  const chunkOverlap = kb.chunking_config?.chunk_overlap ?? 50;
+                  const embedModel = kb.embedding_config?.model?.split("/").pop() ?? kb.embedding_config?.model ?? "bge-large";
 
-        {documents?.length > 0 ? (
+                  return (
+                    <div key={kb.id} className="cyber-chamfer-sm border border-[#2a2a3a] bg-[#12121a] px-2.5 py-2">
+                      <div className="flex items-center justify-between gap-2 font-bold uppercase text-xs">
+                        <span className="truncate text-foreground" title={kb.name}>{kb.name}</span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-[9px] text-accent">{kbDocuments.length || kb.document_count || 0} DOCS</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() => setSelectedInspectKb(kb)}
+                            className="size-4 rounded-none text-muted-foreground hover:text-accent hover:bg-[#1c1c2e] p-0"
+                            title="Inspect Knowledge Base specifications"
+                            aria-label={`Inspect configuration for ${kb.name}`}
+                          >
+                            <Info className="size-3" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Inline specs card */}
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedInspectKb(kb)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSelectedInspectKb(kb);
+                          }
+                        }}
+                        className="mt-2 grid grid-cols-2 gap-1.5 border border-[#2a2a3a]/80 bg-[#0a0a0f] p-1.5 text-[9px] cursor-pointer hover:border-accent/40 transition-colors group select-none"
+                        title="Click to open full KB specification dialog"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-[8px] text-muted-foreground uppercase flex items-center justify-between">
+                            <span>CHUNKING</span>
+                            <span className="text-[8px] text-accent/70 group-hover:text-accent">[SPECS]</span>
+                          </div>
+                          <p className="font-bold text-foreground uppercase truncate">
+                            {chunkStrategy}
+                          </p>
+                          <p className="text-[8px] text-muted-foreground">
+                            {chunkSize} / {chunkOverlap}
+                          </p>
+                        </div>
+                        <div className="min-w-0 border-l border-[#2a2a3a]/60 pl-1.5">
+                          <span className="text-[8px] text-muted-foreground uppercase">EMBEDDING</span>
+                          <p className="font-bold text-accent uppercase truncate" title={kb.embedding_config?.model}>
+                            {embedModel}
+                          </p>
+                          <p className="text-[8px] text-muted-foreground uppercase">
+                            {kb.embedding_config?.provider ? `${kb.embedding_config.provider.toUpperCase()} VECTOR` : "DENSE_VECTOR"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {kbDocuments.length ? (
+                        <div className="mt-2 space-y-1 border-t border-[#2a2a3a] pt-1.5">
+                          {kbDocuments.map((document) => (
+                            <div key={document.id} className="flex min-w-0 items-center gap-1.5 text-[9px] text-muted-foreground">
+                              <FileText className="size-3 shrink-0 text-accent" />
+                              <span className="truncate">{document.name}</span>
+                              <span className="ml-auto shrink-0 uppercase">{document.status}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </SectionAccordion>
+        )}
+
+        {(documents?.length > 0 || readyAttachedKbs.length > 0) ? (
           <div className="space-y-3">
             {/* 1. QUERY TRANSFORMATION */}
             <SectionAccordion
@@ -898,6 +973,13 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
           </div>
         )}
       </div>
+
+      <KbDetailsDialog
+        kb={selectedInspectKb}
+        open={Boolean(selectedInspectKb)}
+        onOpenChange={(open) => !open && setSelectedInspectKb(null)}
+        documents={selectedInspectKb ? threadDocuments[selectedInspectKb.id] : undefined}
+      />
     </aside>
   );
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { ArrowUpRight, LogOut, MoreVertical, Pencil, Plus, Trash2, Terminal } from "lucide-react";
 
@@ -34,6 +35,7 @@ type Project = {
 };
 
 export default function Home() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [name, setName] = useState("");
@@ -49,28 +51,39 @@ export default function Home() {
     void fetchProjects();
   }, [fetchProjects]);
 
-  function addProject(event: React.FormEvent<HTMLFormElement>) {
+  async function addProject(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const projectName = name.trim();
     if (!projectName) return;
-    if (!editProjectId) {
-      createProject({
-        name: projectName,
-        description: description.trim() || "No description yet.",
-      });
-    } else {
-      updateProject(
-        {
+    try {
+      if (!editProjectId) {
+        const newProj = await createProject({
           name: projectName,
           description: description.trim() || "No description yet.",
-        },
-        editProjectId
-      );
+        });
+        setName("");
+        setDescription("");
+        setEditProjectId("");
+        setOpen(false);
+        if (newProj?.id) {
+          router.push(`/project/${newProj.id}`);
+        }
+      } else {
+        await updateProject(
+          {
+            name: projectName,
+            description: description.trim() || "No description yet.",
+          },
+          editProjectId
+        );
+        setName("");
+        setDescription("");
+        setEditProjectId("");
+        setOpen(false);
+      }
+    } catch {
+      // Error is set in store
     }
-    setName("");
-    setDescription("");
-    setEditProjectId("");
-    setOpen(false);
   }
 
   function onEdit(item: Project) {

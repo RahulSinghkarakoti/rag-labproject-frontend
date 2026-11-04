@@ -1,8 +1,6 @@
 "use client";
 
 import {
-  ComposerAddAttachment,
-  ComposerAttachments,
   UserMessageAttachments,
 } from "@/components/assistant-ui/elements/attachment.aui";
 import { File } from "@/components/assistant-ui/elements/file";
@@ -409,26 +407,23 @@ const ThreadSuggestionItem: FC = () => {
 const Composer: FC<{ autoFocus: boolean }> = ({ autoFocus }) => {
   return (
     <ComposerPrimitive.Root className="aui-composer-root relative flex w-full flex-col font-mono">
-      <ComposerPrimitive.AttachmentDropzone asChild>
-        <div
-          data-slot="aui_composer-shell"
-          className="cyber-chamfer-sm border border-[#2a2a3a] bg-[#12121a] focus-within:border-accent flex w-full cursor-text flex-col gap-2 p-3 transition-none"
-        >
-          <ComposerAttachments />
-          <div className="flex items-center gap-2">
-            <span className="text-accent font-bold text-sm">&gt;</span>
-            <ComposerPrimitive.Input
-              placeholder="Type query instruction..."
-              className="aui-composer-input caret-accent placeholder:text-muted-foreground/60 max-h-48 min-h-8 w-full resize-none bg-transparent py-1 text-xs font-mono leading-6 outline-none text-foreground"
-              rows={1}
-              autoFocus={autoFocus}
-              enterKeyHint="send"
-              aria-label="Message input"
-            />
-          </div>
-          <ComposerAction />
+      <div
+        data-slot="aui_composer-shell"
+        className="cyber-chamfer-sm border border-[#2a2a3a] bg-[#12121a] focus-within:border-accent flex w-full cursor-text flex-col gap-2 p-3 transition-none"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-accent font-bold text-sm">&gt;</span>
+          <ComposerPrimitive.Input
+            placeholder="Type query instruction..."
+            className="aui-composer-input caret-accent placeholder:text-muted-foreground/60 max-h-48 min-h-8 w-full resize-none bg-transparent py-1 text-xs font-mono leading-6 outline-none text-foreground"
+            rows={1}
+            autoFocus={autoFocus}
+            enterKeyHint="send"
+            aria-label="Message input"
+          />
         </div>
-      </ComposerPrimitive.AttachmentDropzone>
+        <ComposerAction />
+      </div>
     </ComposerPrimitive.Root>
   );
 };
@@ -441,8 +436,7 @@ const ComposerAction: FC = () => {
   );
 
   return (
-    <div className="aui-composer-action-wrapper relative flex items-center justify-between border-t border-[#2a2a3a] pt-2">
-      <ComposerAddAttachment />
+    <div className="aui-composer-action-wrapper relative flex items-center justify-end border-t border-[#2a2a3a] pt-2">
       <div className="flex items-center gap-1.5">
         <AuiIf condition={(s) => s.thread.capabilities.dictation}>
           <AuiIf condition={(s) => s.composer.dictation == null}>
@@ -768,7 +762,20 @@ const UserMessage: FC = () => {
 
 const UserActionBar: FC = () => {
   const setPendingMessageAction = useThreadStore((state) => state.setPendingMessageAction);
-  const messageId = useAuiState((s) => s.message.id);
+  const resolveBackendMessageId = useThreadStore((state) => state.resolveBackendMessageId);
+  const selectedThreadId = useThreadStore((state) => state.selectedThreadId);
+  const messageId = useAuiState((s) => {
+    const custom = (s.message.metadata as Record<string, unknown> | undefined)?.custom as Record<string, unknown> | undefined;
+    if (typeof custom?.user_message_id === "string") {
+      return custom.user_message_id;
+    }
+    return s.message.id;
+  });
+
+  const handleEdit = () => {
+    const resolvedId = resolveBackendMessageId(messageId, selectedThreadId ?? undefined);
+    setPendingMessageAction({ type: "edit", messageId: resolvedId });
+  };
 
   return (
     <ActionBarPrimitive.Root
@@ -780,7 +787,7 @@ const UserActionBar: FC = () => {
         <TooltipIconButton
           tooltip="Edit"
           className="aui-user-action-edit text-muted-foreground hover:text-accent"
-          onClick={() => setPendingMessageAction({ type: "edit", messageId })}
+          onClick={handleEdit}
         >
           <PencilIcon />
         </TooltipIconButton>

@@ -25,12 +25,10 @@ const preprocessMarkdown = (text: string) => {
   const normalized = text
     .replace(/([^\n])\s+([-*])\s+(?=\*\*)/g, "$1\n$2 ")
     .replace(/([^\n])\s+(\d+\.)\s+(?=\*\*)/g, "$1\n$2 ");
-  return normalized.replace(/(?<!\[)\[(\d+(?:\s*,\s*\d+)*)\](?!\]\()/g, (_, nums) => {
-    return nums
-      .split(/\s*,\s*/)
-      .map((n: string) => `[${n}](#citation-${n})`)
-      .join(" ");
-  });
+  return normalized.replace(
+  /\[([^[\]]+\.(?:md|csv|pdf|txt))\]/g,
+  (_, filename) => `[${filename}](#citation-${filename})`
+);
 };
 
 const useShallowStable = <T extends Record<string, unknown> | undefined>(
@@ -135,7 +133,7 @@ const defaultComponents = memoizeMarkdownComponents({
   ),
   a: function Anchor({ className, href, children, ...props }) {
     const isCitation = href?.startsWith("#citation-");
-    
+
     // Always call hook unconditionally
     const message = useAuiState((s) => s.message);
 

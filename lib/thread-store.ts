@@ -8,6 +8,9 @@ type ThreadStore = {
   messages: Record<string, ThreadMessage[]>;
   messagesStatus: "idle" | "loading" | "error";
   messagesError: string | null;
+  messageIdMap: Record<string, string>;
+  registerMessageIdMapping: (clientMsgId: string, backendMsgId: string) => void;
+  resolveBackendMessageId: (id: string, threadId?: string) => string;
   selectedThreadId: string | null;
   status: "idle" | "loading" | "saving" | "deleting" | "error";
   error: string | null;
@@ -15,7 +18,7 @@ type ThreadStore = {
   fetchMessages: (threadId: string) => Promise<void>;
   fetchRunSteps: (messageId: string) => Promise<RunDetails>;
   sendMessage: (threadId: string, content: string, signal?: AbortSignal) => Promise<Response>;
-  editMessage: (threadId: string, messageId: string, content: string) => Promise<unknown>;
+  editMessage: (threadId: string, messageId: string, content: string, signal?: AbortSignal) => Promise<Response>;
   retryMessage: (threadId: string, messageId: string, signal?: AbortSignal) => Promise<Response>;
   pendingMessageAction: { type: "edit" | "retry"; messageId: string } | null;
   setPendingMessageAction: (action: { type: "edit" | "retry"; messageId: string }) => void;
@@ -30,6 +33,12 @@ type ThreadStore = {
   refreshGenerations: Record<string, number>;
   clearError: () => void;
 };
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isUuid(id: string | null | undefined): boolean {
+  return typeof id === "string" && UUID_REGEX.test(id);
+}
 
 const message = (error: unknown) => (error instanceof Error ? error.message : "Request failed");
 const configTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -48,12 +57,33 @@ export const useThreadStore = create<ThreadStore>((set, get) => ({
   messages: {},
   messagesStatus: "idle",
   messagesError: null,
+  messageIdMap: {},
   selectedThreadId: null,
   status: "idle",
   error: null,
   latestPipelineVersions: {},
   refreshGenerations: {},
   pendingMessageAction: null,
+
+  registerMessageIdMapping: (clientMsgId, backendMsgId) =>
+    set((state) => ({
+      messageIdMap: { ...state.messageIdMap, [clientMsgId]: backendMsgId },
+    })),
+
+  resolveBackendMessageId: (id, threadId) => {
+    if (isUuid(id)) return id;
+    const mapped = get().messageIdMap[id];
+    if (isUuid(mapped)) return mapped;
+    if (threadId) {
+      const threadMsgs = get().messages[threadId] ?? [];
+      const humanMsgs = threadMsgs.filter((m) => m.role === "human");
+      if (humanMsgs.length > 0) {
+        const last = humanMsgs[humanMsgs.length - 1];
+        if (isUuid(last.id)) return last.id;
+      }
+    }
+    return id;
+  },
 
   fetchThreads: async (projectId) => {
     set({ status: "loading", error: null });
@@ -88,10 +118,14 @@ export const useThreadStore = create<ThreadStore>((set, get) => ({
 
   sendMessage: (threadId, content, signal) =>
     threadApi.sendMessage(threadId, { content, signal }),
-  editMessage: (threadId, messageId, content) =>(
-    threadApi.editMessage(threadId, messageId, content)),
-  retryMessage: (threadId, messageId, signal) =>
-    threadApi.retryMessage(threadId, messageId, signal),
+  editMessage: (threadId, messageId, content, signal) => {
+    const resolvedId = get().resolveBackendMessageId(messageId, threadId);
+    return threadApi.editMessage(threadId, resolvedId, content, signal);
+  },
+  retryMessage: (threadId, messageId, signal) => {
+    const resolvedId = get().resolveBackendMessageId(messageId, threadId);
+    return threadApi.retryMessage(threadId, resolvedId, signal);
+  },
   setPendingMessageAction: (pendingMessageAction) => set({ pendingMessageAction }),
   clearPendingMessageAction: () => set({ pendingMessageAction: null }),
 

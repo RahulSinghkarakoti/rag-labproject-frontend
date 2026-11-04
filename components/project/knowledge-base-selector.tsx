@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   ChevronDown,
   Database,
+  Info,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -17,8 +18,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useKnowledgeBaseStore } from "@/lib/store";
+import { useDocumentStore, useKnowledgeBaseStore, type KnowledgeBase } from "@/lib/store";
 import { CreateKnowledgeBaseDialog } from "./create-knowledge-base-dialog";
+import { KbDetailsDialog } from "./kb-details-dialog";
 
 interface KnowledgeBaseSelectorProps {
   projectId: string;
@@ -26,10 +28,14 @@ interface KnowledgeBaseSelectorProps {
 
 export function KnowledgeBaseSelector({ projectId }: KnowledgeBaseSelectorProps) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isInspectOpen, setIsInspectOpen] = useState(false);
+  const [inspectKb, setInspectKb] = useState<KnowledgeBase | null>(null);
+
   const knowledgeBases = useKnowledgeBaseStore((state) => state.knowledgeBases);
   const selectedKbId = useKnowledgeBaseStore((state) => state.selectedKnowledgeBaseId);
   const selectKnowledgeBase = useKnowledgeBaseStore((state) => state.selectKnowledgeBase);
   const deleteKnowledgeBase = useKnowledgeBaseStore((state) => state.deleteKnowledgeBase);
+  const documents = useDocumentStore((state) => state.documents);
 
   const activeKb = knowledgeBases.find((kb) => kb.id === selectedKbId);
 
@@ -93,14 +99,29 @@ export function KnowledgeBaseSelector({ projectId }: KnowledgeBaseSelectorProps)
                       {kb.chunking_config?.strategy ?? "recursive"} ({kb.document_count ?? 0} DOCS)
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    aria-label={`Delete ${kb.name}`}
-                    className="p-1 text-muted-foreground hover:text-destructive transition-none"
-                    onClick={(e) => handleDelete(e, kb.id)}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      aria-label={`Inspect ${kb.name}`}
+                      className="p-1 text-muted-foreground hover:text-accent transition-none"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setInspectKb(kb);
+                        setIsInspectOpen(true);
+                      }}
+                      title="Inspect Knowledge Base specifications"
+                    >
+                      <Info className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Delete ${kb.name}`}
+                      className="p-1 text-muted-foreground hover:text-destructive transition-none"
+                      onClick={(e) => handleDelete(e, kb.id)}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
                 </DropdownMenuItem>
               ))
             )}
@@ -115,6 +136,21 @@ export function KnowledgeBaseSelector({ projectId }: KnowledgeBaseSelectorProps)
           </DropdownMenuContent>
         </DropdownMenu>
 
+        {activeKb && (
+          <Button
+            size="icon-xs"
+            variant="outline"
+            title="Inspect Selected Knowledge Base Configuration"
+            onClick={() => {
+              setInspectKb(activeKb);
+              setIsInspectOpen(true);
+            }}
+            className="shrink-0 h-8 w-8 hover:border-accent hover:text-accent"
+          >
+            <Info className="size-3.5" />
+          </Button>
+        )}
+
         <Button
           size="icon-xs"
           variant="outline"
@@ -125,6 +161,16 @@ export function KnowledgeBaseSelector({ projectId }: KnowledgeBaseSelectorProps)
           <Plus className="size-3.5" />
         </Button>
       </div>
+
+      <KbDetailsDialog
+        kb={inspectKb ?? activeKb ?? null}
+        open={isInspectOpen}
+        onOpenChange={(open) => {
+          setIsInspectOpen(open);
+          if (!open) setInspectKb(null);
+        }}
+        documents={inspectKb && activeKb && inspectKb.id === activeKb.id ? documents : undefined}
+      />
 
       <CreateKnowledgeBaseDialog
         projectId={projectId}

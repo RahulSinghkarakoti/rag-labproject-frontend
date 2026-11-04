@@ -116,30 +116,29 @@ export type RunDetails = {
 };
 
 export const threadApi = {
-  list: (projectId: string) => api.get<Thread[]>(`/api/projects/${projectId}/threads`),
-  messages: (threadId: string) => api.get<ThreadMessage[]>(`/api/threads/${threadId}/messages`),
+  list: (projectId: string) => api.get<Thread[]>(`/api/v1/projects/${projectId}/threads`),
+  messages: (threadId: string) => api.get<ThreadMessage[]>(`/api/v1/threads/${threadId}/messages`),
   sendMessage: (threadId: string, { content, signal }: SendThreadMessageInput) =>
-    streamThreadMessage(`/api/threads/${threadId}/messages`, content, signal),
-  editMessage: (threadId: string, messageId: string, content: string) =>
-    api.put<unknown, { content: string }>(
-      `/api/threads/${threadId}/messages/${messageId}`,
-      { content },
-    ),
+    streamThreadMessage(`/api/v1/threads/${threadId}/messages`, content, signal),
+  editMessage: (threadId: string, messageId: string, content: string, signal?: AbortSignal) =>
+    streamThreadMessage(`/api/v1/threads/${threadId}/messages/${messageId}/edit`, content, signal),
   retryMessage: (threadId: string, messageId: string, signal?: AbortSignal) =>
-    streamThreadMessage(`/api/threads/${threadId}/messages/${messageId}/retry`, undefined, signal),
+    streamThreadMessage(`/api/v1/threads/${threadId}/messages/${messageId}/retry`, undefined, signal),
   latestPipeline: (threadId: string) =>
-    api.get<PipelineVersion>(`/api/threads/${threadId}/pipeline/latest`),
+    api.get<PipelineVersion>(`/api/v1/threads/${threadId}/pipeline/latest`),
   create: (projectId: string, input: CreateThreadInput) =>
-    api.post<Thread, CreateThreadInput>(`/api/projects/${projectId}/threads`, {
+    api.post<Thread, CreateThreadInput>(`/api/v1/projects/${projectId}/threads`, {
       ...input,
       config: threadConfigSchema.parse(input.config),
     }),
   update: (threadId: string, input: Partial<CreateThreadInput>) =>
-    api.patch<Thread, Partial<CreateThreadInput>>(`/api/threads/${threadId}`, {
+    api.patch<Thread, Partial<CreateThreadInput>>(`/api/v1/threads/${threadId}`, {
       ...input,
       ...(input.config ? { config: threadConfigSchema.parse(input.config) } : {}),
     }),
-  remove: (threadId: string) => api.delete(`/api/threads/${threadId}`),
+  remove: (threadId: string) => api.delete(`/api/v1/threads/${threadId}`),
   runSteps: (messageId: string) =>
     api.get<RunDetails>(`/api/v1/messages/${messageId}/run-steps`),
+  cancelRun: (runId: string) =>
+    api.post(`/api/v1/runs/${runId}/cancel`),
 };

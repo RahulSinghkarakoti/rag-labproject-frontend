@@ -14,9 +14,13 @@ import {
 } from "@/components/ui/dialog";
 import { useThreadStore } from "@/lib/thread-store";
 import { useKnowledgeBaseStore } from "@/lib/store";
+import type { Thread } from "@/lib/thread-api";
 
 export function ThreadPanel({ projectId, canCreate = true }: { projectId: string; canCreate?: boolean }) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [threadToDelete, setThreadToDelete] = useState<Thread | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [selectedKbIds, setSelectedKbIds] = useState<string[]>([]);
   const threads = useThreadStore((state) => state.threads);
@@ -50,6 +54,20 @@ export function ThreadPanel({ projectId, canCreate = true }: { projectId: string
     }
   };
 
+  const handleConfirmDelete = async () => {
+    if (!threadToDelete) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteThread(threadToDelete.id);
+      setThreadToDelete(null);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete thread");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <aside className="flex min-h-0 shrink-0 flex-col border-r border-[#2a2a3a] bg-[#0a0a0f] font-mono">
       <div className="border-b border-[#2a2a3a] p-3 bg-[#12121a]">
@@ -67,9 +85,18 @@ export function ThreadPanel({ projectId, canCreate = true }: { projectId: string
               <MessageSquare className="size-3.5 shrink-0 text-accent" />
               <span className="truncate">{thread.title || "NEW_THREAD"}</span>
             </button>
-            <Button variant="ghost" size="icon-xs" className="mr-1 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive" onClick={() => void deleteThread(thread.id)} aria-label={`Delete ${thread.title || "thread"}`}>
+            <button
+              type="button"
+              className="mr-1 p-1 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-none cyber-chamfer-sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setThreadToDelete(thread);
+              }}
+              aria-label={`Delete ${thread.title || "thread"}`}
+              title="Delete thread"
+            >
               <Trash2 className="size-3.5" />
-            </Button>
+            </button>
           </div>
         ))}
         {!threads.length && status !== "loading" ? <p className="px-2 py-4 text-[10px] uppercase text-muted-foreground">&gt; NO_ACTIVE_THREADS</p> : null}
@@ -108,6 +135,58 @@ export function ThreadPanel({ projectId, canCreate = true }: { projectId: string
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>CANCEL</Button>
             <Button onClick={() => void addThread()} disabled={!title.trim() || selectedKbIds.length === 0 || status === "saving"}>INITIALIZE</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(threadToDelete)}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) {
+            setThreadToDelete(null);
+            setDeleteError(null);
+          }
+        }}
+      >
+        <DialogContent className="border-[#2a2a3a] bg-[#0d0d14] font-mono text-foreground sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="uppercase tracking-wider text-destructive text-base flex items-center gap-2">
+              <Trash2 className="size-4 text-destructive" />
+              &gt; CONFIRM_DELETE_THREAD
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Are you sure you want to permanently delete this thread? All conversation messages, runs, and sessions within this thread will be purged.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="my-2 p-3 cyber-chamfer-sm border border-destructive/30 bg-destructive/5 space-y-1">
+            <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">TARGET_THREAD:</p>
+            <p className="text-xs font-bold text-foreground truncate">{threadToDelete?.title || "UNTITLED_THREAD"}</p>
+            <p className="text-[10px] text-muted-foreground font-mono truncate">{threadToDelete?.id}</p>
+          </div>
+
+          {deleteError ? (
+            <p className="text-xs text-destructive font-mono uppercase">&gt; ERROR: {deleteError}</p>
+          ) : null}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setThreadToDelete(null);
+                setDeleteError(null);
+              }}
+              disabled={isDeleting}
+            >
+              CANCEL
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void handleConfirmDelete()}
+              disabled={isDeleting}
+              className="font-bold uppercase tracking-wider"
+            >
+              {isDeleting ? "DELETING..." : "CONFIRM_DELETE"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

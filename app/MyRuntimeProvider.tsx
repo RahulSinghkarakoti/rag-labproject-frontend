@@ -11,7 +11,7 @@ import {
 } from "@assistant-ui/react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
-import type { ThreadMessage } from "@/lib/thread-api";
+import { threadApi, type ThreadMessage } from "@/lib/thread-api";
 import { useThreadStore } from "@/lib/thread-store";
 import { ThreadMessageLoader } from "@/components/ui/ascii-loader";
 import toolkit from "./toolkit";
@@ -42,7 +42,14 @@ function toThreadMessage(message: ThreadMessage): ThreadMessageLike {
 function toBranchableHistory(messages: ThreadMessage[]) {
   let previousAssistantId: string | null = null;
   const items = messages.map((message) => {
-    const parentId = message.parent_message_id ?? previousAssistantId;
+    let parentId: string | null;
+    if (message.parent_message_id !== undefined && message.parent_message_id !== null) {
+      parentId = message.parent_message_id;
+    } else if (message.role === "human" && (message.sequence === 1 || !previousAssistantId)) {
+      parentId = null;
+    } else {
+      parentId = previousAssistantId;
+    }
     if (message.role === "assistant" || message.role === "tool") {
       previousAssistantId = message.id;
     }
@@ -99,7 +106,12 @@ export function MyRuntimeProvider({
 
   const messages = (threadMessages ?? [])
     .slice()
-    .sort((a, b) => a.sequence - b.sequence)
+    .sort((a, b) => {
+      if (a.sequence !== b.sequence) return a.sequence - b.sequence;
+      const aTime = typeof a.metadata?.created_at === "string" ? new Date(a.metadata.created_at).getTime() : 0;
+      const bTime = typeof b.metadata?.created_at === "string" ? new Date(b.metadata.created_at).getTime() : 0;
+      return aTime - bTime;
+    });
   return <RuntimeInner threadId={threadId} messages={messages}>{children}</RuntimeInner>;
 }
 
@@ -116,6 +128,7 @@ function RuntimeInner({
   const chatModel = useMemo<ChatModelAdapter>(() => ({
     async *run({ messages: threadMessages, abortSignal }) {
       const lastUserMessage = [...threadMessages].reverse().find((message) => message.role === "user");
+      const clientUserMessageId = lastUserMessage?.id;
       const content = typeof lastUserMessage?.content === "string"
         ? lastUserMessage.content
         : lastUserMessage?.content
@@ -130,10 +143,11 @@ function RuntimeInner({
 
       try {
         if (pendingAction?.type === "edit") {
-          await editMessage(threadId, pendingAction.messageId, content);
-          response = await retryMessage(threadId, pendingAction.messageId, abortSignal);
+          const resolvedMessageId = useThreadStore.getState().resolveBackendMessageId(pendingAction.messageId, threadId);
+          response = await editMessage(threadId, resolvedMessageId, content, abortSignal);
         } else if (pendingAction?.type === "retry") {
-          response = await retryMessage(threadId, pendingAction.messageId, abortSignal);
+          const resolvedMessageId = useThreadStore.getState().resolveBackendMessageId(pendingAction.messageId, threadId);
+          response = await retryMessage(threadId, resolvedMessageId, abortSignal);
         } else {
           response = await sendMessage(threadId, content, abortSignal);
         }
@@ -173,6 +187,9 @@ function RuntimeInner({
       const onAbort = () => {
         try {
           reader.cancel().catch(() => undefined);
+          if (runId) {
+            void threadApi.cancelRun(String(runId)).catch(() => undefined);
+          }
         } catch {
           // ignore
         }
@@ -209,6 +226,9 @@ function RuntimeInner({
             if (event === "started") {
               runId = payload.run_id;
               userMessageId = payload.message_id;
+              if (clientUserMessageId && typeof userMessageId === "string") {
+                useThreadStore.getState().registerMessageIdMapping(clientUserMessageId, userMessageId);
+              }
               continue;
             }
             if (event === "error" || payload.type === "error") {
@@ -260,6 +280,10 @@ function RuntimeInner({
       if (abortSignal?.aborted) return;
 
       if (!completed) throw new Error("Message stream ended before completion");
+
+      if (threadId) {
+        void useThreadStore.getState().fetchMessages(threadId).catch(() => undefined);
+      }
     },
   }), [clearPendingMessageAction, editMessage, retryMessage, sendMessage, threadId]);
 
