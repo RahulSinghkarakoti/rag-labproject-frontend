@@ -1,6 +1,37 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, Shield } from "lucide-react";
 import { Footer } from "@/components/footer";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy // Governance",
+  description:
+    "RAG-LAB data governance, privacy protocols, and telemetry handling for document indexing and vector embeddings.",
+  openGraph: {
+    title: "Privacy Policy // Governance | RAG-LAB",
+    description:
+      "RAG-LAB data governance, privacy protocols, and telemetry handling for document indexing and vector embeddings.",
+    url: "/privacy",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "RAG-LAB Privacy Policy",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Privacy Policy // Governance | RAG-LAB",
+    description:
+      "RAG-LAB data governance, privacy protocols, and telemetry handling for document indexing and vector embeddings.",
+    images: ["/og-image.png"],
+  },
+  alternates: {
+    canonical: "/privacy",
+  },
+};
 
 export default function PrivacyPage() {
   return (
@@ -38,7 +69,7 @@ export default function PrivacyPage() {
                 1. INFORMATION COLLECTION
               </h2>
               <p>
-                NOTEBOOKLLM-LITE collects necessary workspace parameters and authentication tokens required to operate system project nodes.
+                RAG-LAB collects necessary workspace parameters and authentication tokens required to operate system project nodes.
               </p>
               <ul className="list-disc list-inside space-y-1.5 pl-2">
                 <li><strong className="text-foreground">Authentication Data:</strong> User identity provided via configured OAuth providers (e.g. Google).</li>

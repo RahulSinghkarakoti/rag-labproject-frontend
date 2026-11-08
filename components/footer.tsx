@@ -13,7 +13,7 @@ export function Footer() {
           <span className="inline-block size-1.5 rounded-full bg-accent animate-pulse" />
           <span className="text-accent font-semibold">SYS.NODE</span>
           <span className="text-[#3a3a4c]">//</span>
-          <span>© {currentYear} NOTEBOOKLLM-LITE</span>
+          <span>© {currentYear} RAG-LAB</span>
         </div>
 
         {/* Right navigation hyperlinks */}

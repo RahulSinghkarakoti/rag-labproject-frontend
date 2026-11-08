@@ -1,6 +1,37 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
 import { ThemeAccentSelector } from "@/components/theme-accent-selector";
+
+export const metadata: Metadata = {
+  title: "System Access // Terminal Authentication",
+  description:
+    "Authenticate user credentials to access RAG-LAB neural workspace nodes, knowledge bases, and RAG pipelines.",
+  openGraph: {
+    title: "System Access // Terminal Authentication | RAG-LAB",
+    description:
+      "Authenticate user credentials to access RAG-LAB neural workspace nodes, knowledge bases, and RAG pipelines.",
+    url: "/login",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "RAG-LAB System Access",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "System Access // Terminal Authentication | RAG-LAB",
+    description:
+      "Authenticate user credentials to access RAG-LAB neural workspace nodes, knowledge bases, and RAG pipelines.",
+    images: ["/og-image.png"],
+  },
+  alternates: {
+    canonical: "/login",
+  },
+};
 
 function GoogleIcon() {
   return (

@@ -101,12 +101,16 @@ export const useThreadStore = create<ThreadStore>((set, get) => ({
   },
 
   fetchMessages: async (threadId) => {
-    set({ messagesStatus: "loading", messagesError: null });
+    const hasCachedMessages = Boolean(get().messages[threadId]);
+    if (!hasCachedMessages) {
+      set({ messagesStatus: "loading", messagesError: null });
+    }
     try {
       const messages = (await threadApi.messages(threadId)) ?? [];
       set((state) => ({
         messages: { ...state.messages, [threadId]: messages },
         messagesStatus: "idle",
+        messagesError: null,
       }));
     } catch (error) {
       set({ messagesStatus: "error", messagesError: message(error) });

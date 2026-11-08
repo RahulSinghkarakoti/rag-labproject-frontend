@@ -1,6 +1,37 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, FileText } from "lucide-react";
 import { Footer } from "@/components/footer";
+
+export const metadata: Metadata = {
+  title: "Terms of Service // Governance",
+  description:
+    "System protocol terms of service, acceptable usage guidelines, and operational parameters for RAG-LAB.",
+  openGraph: {
+    title: "Terms of Service // Governance | RAG-LAB",
+    description:
+      "System protocol terms of service, acceptable usage guidelines, and operational parameters for RAG-LAB.",
+    url: "/terms",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "RAG-LAB Terms of Service",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Terms of Service // Governance | RAG-LAB",
+    description:
+      "System protocol terms of service, acceptable usage guidelines, and operational parameters for RAG-LAB.",
+    images: ["/og-image.png"],
+  },
+  alternates: {
+    canonical: "/terms",
+  },
+};
 
 export default function TermsPage() {
   return (
@@ -38,7 +69,7 @@ export default function TermsPage() {
                 1. ACCEPTANCE & SYSTEM ACCESS
               </h2>
               <p>
-                By initializing or accessing project nodes within NOTEBOOKLLM-LITE, you agree to comply with system protocols and these operational terms. Access is restricted to authorized accounts.
+                By initializing or accessing project nodes within RAG-LAB, you agree to comply with system protocols and these operational terms. Access is restricted to authorized accounts.
               </p>
             </section>
 

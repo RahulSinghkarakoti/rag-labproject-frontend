@@ -100,7 +100,7 @@ export function MyRuntimeProvider({
     void fetchMessages(threadId).catch(() => undefined);
   }, [retry, threadId]);
 
-  if (threadId && (messagesStatus === "loading" || !threadMessages)) {
+  if (threadId && !threadMessages) {
     return <RuntimeLoading error={error} onRetry={() => setRetry((value) => value + 1)} />;
   }
 
@@ -280,10 +280,6 @@ function RuntimeInner({
       if (abortSignal?.aborted) return;
 
       if (!completed) throw new Error("Message stream ended before completion");
-
-      if (threadId) {
-        void useThreadStore.getState().fetchMessages(threadId).catch(() => undefined);
-      }
     },
   }), [clearPendingMessageAction, editMessage, retryMessage, sendMessage, threadId]);
 

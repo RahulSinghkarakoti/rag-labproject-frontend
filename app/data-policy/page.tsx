@@ -1,6 +1,37 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, Database } from "lucide-react";
 import { Footer } from "@/components/footer";
+
+export const metadata: Metadata = {
+  title: "Data Policy // Vector & Chunking Governance",
+  description:
+    "Data lifecycle, document chunking thresholds, and vector embedding governance policy for RAG-LAB knowledge bases.",
+  openGraph: {
+    title: "Data Policy // Vector & Chunking Governance | RAG-LAB",
+    description:
+      "Data lifecycle, document chunking thresholds, and vector embedding governance policy for RAG-LAB knowledge bases.",
+    url: "/data-policy",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "RAG-LAB Data Policy",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Data Policy // Vector & Chunking Governance | RAG-LAB",
+    description:
+      "Data lifecycle, document chunking thresholds, and vector embedding governance policy for RAG-LAB knowledge bases.",
+    images: ["/og-image.png"],
+  },
+  alternates: {
+    canonical: "/data-policy",
+  },
+};
 
 export default function DataPolicyPage() {
   return (
