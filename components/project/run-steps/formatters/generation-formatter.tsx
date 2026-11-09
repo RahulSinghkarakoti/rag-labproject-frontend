@@ -39,7 +39,7 @@ export function GenerationFormatter({ data, variant }: GenerationFormatterProps)
             </span>
           )}
         </div>
-        <div className="p-3 bg-[#12121a] border border-[#2a2a3a] cyber-chamfer-sm space-y-1">
+        <div className="p-3 bg-card border border-border cyber-chamfer-sm space-y-1">
           <span className="text-[10px] text-muted-foreground uppercase block font-bold">Prompt Focus:</span>
           <p className="text-xs text-foreground font-sans leading-relaxed whitespace-pre-wrap select-text">
             {query}
@@ -70,14 +70,14 @@ export function GenerationFormatter({ data, variant }: GenerationFormatterProps)
         </span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1 px-2 py-0.5 bg-[#1c1c2e] hover:bg-[#2a2a3a] text-muted-foreground hover:text-foreground text-[10px] transition-colors border border-[#2a2a3a]"
+          className="flex items-center gap-1 px-2 py-0.5 bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground text-[10px] transition-colors border border-border"
         >
           {copied ? <Check className="h-3 w-3 text-accent" /> : <Copy className="h-3 w-3" />}
           {copied ? "Copied" : "Copy Output"}
         </button>
       </div>
 
-      <div className="p-3.5 bg-[#12121a] border border-[#2a2a3a] cyber-chamfer-sm text-xs font-sans text-foreground/95 leading-relaxed whitespace-pre-wrap select-text max-h-[360px] overflow-y-auto">
+      <div className="p-3.5 bg-card border border-border cyber-chamfer-sm text-xs font-sans text-foreground/95 leading-relaxed whitespace-pre-wrap select-text max-h-[360px] overflow-y-auto">
         {responseText}
       </div>
     </div>

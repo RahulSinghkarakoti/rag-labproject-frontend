@@ -5,6 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --font-mono: var(--font-mono);
   --radius-sm: 2px;
   --radius-md: 4px;
   --radius-lg: 4px;
@@ -45,7 +46,33 @@
   }
 }
 
-:root, .dark, [data-accent="green"] {
+/* =========================================================================
+   Typography Engine
+   ========================================================================= */
+:root, [data-font="jetbrains"] {
+  --font-mono: var(--font-jetbrains, ui-monospace), monospace;
+}
+[data-font="fira"] {
+  --font-mono: var(--font-fira, ui-monospace), monospace;
+}
+[data-font="space"] {
+  --font-mono: var(--font-space, ui-monospace), monospace;
+}
+[data-font="ibm-plex"] {
+  --font-mono: var(--font-ibm-plex, ui-monospace), monospace;
+}
+[data-font="system"] {
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+body, .font-mono {
+  font-family: var(--font-mono) !important;
+}
+
+/* =========================================================================
+   Dark Theme (Default)
+   ========================================================================= */
+:root, [data-theme="dark"], .dark {
   --background: #0a0a0f;
   --foreground: #e0e0e0;
   --card: #12121a;
@@ -53,29 +80,33 @@
   --popover: #12121a;
   --popover-foreground: #fafafa;
   --border: #2a2a3a;
-  /* Primary Accent: Electric Green #00ff88 */
+  --secondary: #1c1c2e;
+  --secondary-foreground: var(--accent);
+  --muted: #1c1c2e;
+  --muted-foreground: #6b7280;
+  --input: #12121a;
+  --destructive: #ff3366;
+  --sidebar: #0a0a0f;
+  --sidebar-foreground: #e0e0e0;
+  --sidebar-border: #2a2a3a;
+  color-scheme: dark;
+}
+
+/* Dark Mode Accents */
+:root, [data-theme="dark"][data-accent="green"], [data-accent="green"]:not([data-theme="light"]) {
   --accent: #00ff88;
   --accent-foreground: #0a0a0f;
   --primary: #00ff88;
   --primary-foreground: #0a0a0f;
-  --secondary: #1c1c2e;
-  --secondary-foreground: #00ff88;
-  --muted: #1c1c2e;
-  --muted-foreground: #6b7280;
-  --input: #12121a;
   --ring: #00ff88;
-  --destructive: #ff3366;
-  --sidebar: #0a0a0f;
-  --sidebar-foreground: #e0e0e0;
   --sidebar-primary: #00ff88;
   --sidebar-primary-foreground: #0a0a0f;
+  --sidebar-ring: #00ff88;
   --sidebar-accent: #1c1c2e;
   --sidebar-accent-foreground: #00ff88;
-  --sidebar-border: #2a2a3a;
-  --sidebar-ring: #00ff88;
 }
 
-[data-accent="blue"] {
+[data-theme="dark"][data-accent="blue"], [data-accent="blue"]:not([data-theme="light"]) {
   --accent: #00d4ff;
   --accent-foreground: #0a0a0f;
   --primary: #00d4ff;
@@ -85,10 +116,11 @@
   --sidebar-primary: #00d4ff;
   --sidebar-primary-foreground: #0a0a0f;
   --sidebar-ring: #00d4ff;
+  --sidebar-accent: #1c1c2e;
   --sidebar-accent-foreground: #00d4ff;
 }
 
-[data-accent="orange"] {
+[data-theme="dark"][data-accent="orange"], [data-accent="orange"]:not([data-theme="light"]) {
   --accent: #ff6600;
   --accent-foreground: #0a0a0f;
   --primary: #ff6600;
@@ -98,14 +130,168 @@
   --sidebar-primary: #ff6600;
   --sidebar-primary-foreground: #0a0a0f;
   --sidebar-ring: #ff6600;
+  --sidebar-accent: #1c1c2e;
   --sidebar-accent-foreground: #ff6600;
+}
+
+/* =========================================================================
+   Light Theme (Day Operations / Clean Lab)
+   ========================================================================= */
+[data-theme="light"], .light {
+  --background: #f4f5f8;
+  --foreground: #11141a;
+  --card: #ffffff;
+  --card-foreground: #11141a;
+  --popover: #ffffff;
+  --popover-foreground: #11141a;
+  --border: #d2d6e2;
+  --secondary: #e8ecf4;
+  --secondary-foreground: #11141a;
+  --muted: #edf0f7;
+  --muted-foreground: #62697b;
+  --input: #ffffff;
+  --destructive: #dc2626;
+  --sidebar: #eef1f7;
+  --sidebar-foreground: #11141a;
+  --sidebar-border: #d2d6e2;
+  --accent: #009955;
+  --accent-foreground: #ffffff;
+  --primary: #009955;
+  --primary-foreground: #ffffff;
+  --ring: #009955;
+  --sidebar-primary: #009955;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-ring: #009955;
+  --sidebar-accent: #e8f5ed;
+  --sidebar-accent-foreground: #009955;
+  color-scheme: light;
+}
+
+/* Light Mode Accents (calibrated for high contrast & readability) */
+[data-theme="light"][data-accent="green"] {
+  --accent: #009955;
+  --accent-foreground: #ffffff;
+  --primary: #009955;
+  --primary-foreground: #ffffff;
+  --ring: #009955;
+  --sidebar-primary: #009955;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-ring: #009955;
+  --sidebar-accent: #e8f5ed;
+  --sidebar-accent-foreground: #009955;
+}
+
+[data-theme="light"][data-accent="blue"] {
+  --accent: #0284c7;
+  --accent-foreground: #ffffff;
+  --primary: #0284c7;
+  --primary-foreground: #ffffff;
+  --secondary-foreground: #0284c7;
+  --ring: #0284c7;
+  --sidebar-primary: #0284c7;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-ring: #0284c7;
+  --sidebar-accent: #e0f2fe;
+  --sidebar-accent-foreground: #0284c7;
+}
+
+[data-theme="light"][data-accent="orange"] {
+  --accent: #d95700;
+  --accent-foreground: #ffffff;
+  --primary: #d95700;
+  --primary-foreground: #ffffff;
+  --secondary-foreground: #d95700;
+  --ring: #d95700;
+  --sidebar-primary: #d95700;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-ring: #d95700;
+  --sidebar-accent: #ffedd5;
+  --sidebar-accent-foreground: #d95700;
+}
+
+/* =========================================================================
+   Terminal UI Utility Overrides (dynamically bind legacy hex tokens to theme variables)
+   ========================================================================= */
+.bg-\[\#0a0a0f\] {
+  background-color: var(--background) !important;
+}
+
+.bg-\[\#0d0d14\] {
+  background-color: var(--card) !important;
+}
+
+.bg-\[\#12121a\] {
+  background-color: var(--card) !important;
+}
+
+.bg-\[\#161622\] {
+  background-color: var(--secondary) !important;
+}
+
+.bg-\[\#1c1c2e\] {
+  background-color: var(--muted) !important;
+}
+
+.border-\[\#2a2a3a\] {
+  border-color: var(--border) !important;
+}
+
+.border-\[\#1c1c2e\] {
+  border-color: var(--border) !important;
+}
+
+.text-\[\#e0e0e0\],
+.text-\[\#fafafa\] {
+  color: var(--foreground) !important;
+}
+
+.text-\[\#a0a0b0\] {
+  color: var(--muted-foreground) !important;
+}
+
+.hover\:bg-\[\#1c1c2e\]:hover {
+  background-color: var(--muted) !important;
+}
+
+.hover\:bg-\[\#161622\]:hover {
+  background-color: var(--secondary) !important;
+}
+
+.hover\:border-\[\#2a2a3a\]:hover {
+  border-color: var(--accent) !important;
+}
+
+.bg-accent.text-\[\#0a0a0f\],
+.bg-accent .text-\[\#0a0a0f\],
+button.bg-accent.text-\[\#0a0a0f\] {
+  color: var(--accent-foreground) !important;
+}
+
+/* CRT Scanlines subtle effect in dark, almost invisible in light */
+.scanlines {
+  background-image: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0) 50%,
+    rgba(0, 0, 0, 0.15) 50%,
+    rgba(0, 0, 0, 0.15)
+  );
+  background-size: 100% 4px;
+}
+
+[data-theme="light"] .scanlines {
+  background-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0),
+    rgba(0, 0, 0, 0) 50%,
+    rgba(0, 0, 0, 0.02) 50%,
+    rgba(0, 0, 0, 0.02)
+  );
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: "JetBrains Mono", "Fira Code", monospace;
-  color-scheme: dark;
 }
 
 @layer base {
@@ -136,7 +322,6 @@ body {
     4px 100%, 0 calc(100% - 4px)
   );
 }
- 
 
 /* Terminal Cursor animation */
 @keyframes blink {
@@ -177,4 +362,86 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent);
   opacity: 0.8;
+}
+
+/* =========================================================================
+   React Flow / XYFlow Terminal UI Theme Bindings
+   ========================================================================= */
+.react-flow,
+.react-flow.dark,
+.react-flow.light {
+  --xy-background-color: var(--background) !important;
+  --xy-edge-stroke-default: var(--border) !important;
+  --xy-edge-stroke-selected-default: var(--accent) !important;
+  --xy-node-background-color-default: var(--card) !important;
+  --xy-node-border-default: 1px solid var(--border) !important;
+  --xy-handle-background-color-default: var(--accent) !important;
+  --xy-handle-border-color-default: var(--background) !important;
+  --xy-controls-button-background-color-default: var(--card) !important;
+  --xy-controls-button-background-color-hover-default: var(--secondary) !important;
+  --xy-controls-button-color-default: var(--foreground) !important;
+  --xy-controls-button-border-color-default: var(--border) !important;
+  --xy-controls-box-shadow-default: none !important;
+  --xy-edge-label-background-color-default: var(--card) !important;
+  --xy-edge-label-color-default: var(--foreground) !important;
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+.react-flow__background {
+  background-color: var(--background) !important;
+}
+
+.react-flow__background pattern circle,
+.react-flow__background pattern rect {
+  fill: var(--border) !important;
+}
+
+.react-flow__background pattern path {
+  stroke: var(--border) !important;
+}
+
+.react-flow__controls {
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+}
+
+.react-flow__controls-button {
+  background-color: var(--card) !important;
+  border-bottom: 1px solid var(--border) !important;
+  color: var(--foreground) !important;
+  fill: var(--foreground) !important;
+}
+
+.react-flow__controls-button svg {
+  fill: var(--foreground) !important;
+}
+
+.react-flow__controls-button:hover {
+  background-color: var(--secondary) !important;
+  color: var(--accent) !important;
+  fill: var(--accent) !important;
+}
+
+.react-flow__controls-button:hover svg {
+  fill: var(--accent) !important;
+}
+
+.react-flow__edge-path {
+  stroke: var(--border);
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge.animated path {
+  stroke: var(--accent);
+}
+
+.react-flow__edge-text {
+  fill: var(--foreground) !important;
+  font-family: inherit !important;
+}
+
+.react-flow__edge-textbg {
+  fill: var(--card) !important;
 }

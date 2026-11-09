@@ -2,7 +2,9 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 // import GitHub from "next-auth/providers/github";
 
-const NEXT_PUBLIC_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL!;
+const NEXT_PUBLIC_API_BASE_URL = (
+    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1"
+).replace(/\/+$/, "");
 const AUTH_ERROR_CODES = new Set([
     "RefreshAccessTokenError",
     "NoRefreshToken",
@@ -37,7 +39,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
             if (account && user) {
                 try {
                     const response = await fetch(
-                        `${NEXT_PUBLIC_API_BASE_URL}/api/auth/oauth`,
+                        `${NEXT_PUBLIC_API_BASE_URL}/auth/oauth`,
                         {
                             method: "POST",
                             headers: {
@@ -168,7 +170,7 @@ async function refreshAccessToken(token: any) {
             };
         }
 
-        const response = await fetch(`${NEXT_PUBLIC_API_BASE_URL}/api/auth/refresh`, {
+        const response = await fetch(`${NEXT_PUBLIC_API_BASE_URL}/auth/refresh`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

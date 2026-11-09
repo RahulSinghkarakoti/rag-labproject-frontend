@@ -204,77 +204,97 @@ export function ProjectsDashboard() {
             </Dialog>
           </header>
 
-          <section aria-label="Projects" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
-              <Link
-                key={project.id}
-                href={`/project/${project.id}`}
-                className="group relative flex items-start gap-3.5 cyber-chamfer bg-[#12121a] border border-[#2a2a3a] p-4 transition-none hover:border-accent hover:bg-[#1c1c2e]"
-              >
-                <div className="flex size-9 shrink-0 items-center justify-center cyber-chamfer-sm bg-accent text-[#0a0a0f] text-xs font-black">
-                  {project.name.slice(0, 2).toUpperCase()}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h2 className="truncate text-sm font-bold uppercase tracking-wider text-foreground group-hover:text-accent">
-                        {project.name}
-                      </h2>
-                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground font-sans">
-                        {project.description}
-                      </p>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-1">
-                      <ArrowUpRight className="size-4 text-accent opacity-0 transition-none group-hover:opacity-100" />
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            className="text-muted-foreground hover:bg-[#2a2a3a] hover:text-accent"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }}
+          <section aria-label="Projects">
+            {projects.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-[#2a2a3a] cyber-chamfer bg-[#12121a]/40">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">
+                  // NO_ACTIVE_WORKSPACE_NODES_FOUND
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground/70">
+                  Deploy a new project node to begin workspace indexing.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto border border-[#2a2a3a] cyber-chamfer bg-[#12121a]">
+                <table className="w-full text-left font-mono text-xs">
+                  <thead className="border-b border-[#2a2a3a] bg-[#161622] text-[10px] uppercase tracking-wider text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">Node / Name</th>
+                      <th className="px-4 py-3 font-semibold">Description</th>
+                      <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#2a2a3a]/60">
+                    {projects.map((project) => (
+                      <tr
+                        key={project.id}
+                        className="group transition-colors hover:bg-[#1c1c2e]"
+                      >
+                        <td className="px-4 py-3.5 align-middle">
+                          <Link
+                            href={`/project/${project.id}`}
+                            className="flex items-center gap-3 font-bold uppercase tracking-wider text-foreground hover:text-accent"
                           >
-                            <MoreVertical className="size-3.5" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-36">
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              onEdit(project);
-                            }}
-                            className="cursor-pointer"
-                          >
-                            <Pencil className="mr-2 size-3.5 text-accent" />
-                            <span className="uppercase">Edit</span>
-                          </DropdownMenuItem>
+                            <div className="flex size-8 shrink-0 items-center justify-center cyber-chamfer-sm bg-accent text-[#0a0a0f] text-xs font-black">
+                              {project.name.slice(0, 2).toUpperCase()}
+                            </div>
+                            <span className="truncate max-w-[200px] sm:max-w-xs">{project.name}</span>
+                          </Link>
+                        </td>
 
-                          <DropdownMenuItem
-                            className="cursor-pointer text-destructive focus:bg-destructive/20 focus:text-destructive"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setEditProjectId(project.id);
-                              setDeleteOpen(true);
-                            }}
-                          >
-                            <Trash2 className="mr-2 size-3.5" />
-                            <span className="uppercase">Delete</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
+                        <td className="px-4 py-3.5 align-middle text-muted-foreground font-sans max-w-md">
+                          <p className="line-clamp-2 text-xs">{project.description}</p>
+                        </td>
+
+                        <td className="px-4 py-3.5 align-middle text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button asChild variant="outline" size="sm" className="h-7 text-[10px] tracking-wider px-2.5">
+                              <Link href={`/project/${project.id}`}>
+                                OPEN
+                                <ArrowUpRight className="ml-1 size-3 text-accent" />
+                              </Link>
+                            </Button>
+
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  className="text-muted-foreground hover:bg-[#2a2a3a] hover:text-accent"
+                                >
+                                  <MoreVertical className="size-3.5" />
+                                  <span className="sr-only">Open menu</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-36">
+                                <DropdownMenuItem
+                                  onClick={() => onEdit(project)}
+                                  className="cursor-pointer"
+                                >
+                                  <Pencil className="mr-2 size-3.5 text-accent" />
+                                  <span className="uppercase">Edit</span>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem
+                                  className="cursor-pointer text-destructive focus:bg-destructive/20 focus:text-destructive"
+                                  onClick={() => {
+                                    setEditProjectId(project.id);
+                                    setDeleteOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="mr-2 size-3.5" />
+                                  <span className="uppercase">Delete</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         </div>
       </main>

@@ -1,8 +1,35 @@
 import type { Metadata } from "next";
+import { JetBrains_Mono, Fira_Code, Space_Mono, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
-import { ThemeAccentProvider } from "@/components/theme-accent-provider";
+import { ThemeAccentProvider, ThemeScript } from "@/components/theme-accent-provider";
 import MobileWarning from "@/components/MobileWarning";
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains",
+  display: "swap",
+});
+
+const firaCode = Fira_Code({
+  subsets: ["latin"],
+  variable: "--font-fira",
+  display: "swap",
+});
+
+const spaceMono = Space_Mono({
+  weight: ["400", "700"],
+  subsets: ["latin"],
+  variable: "--font-space",
+  display: "swap",
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  variable: "--font-ibm-plex",
+  display: "swap",
+});
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://rag-lab.local";
 
@@ -82,7 +109,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html
+      lang="en"
+      className={`${jetbrainsMono.variable} ${firaCode.variable} ${spaceMono.variable} ${ibmPlexMono.variable} dark`}
+      suppressHydrationWarning
+    >
+      <head>
+        <ThemeScript />
+      </head>
       <body className="scanlines font-mono bg-background text-foreground antialiased selection:bg-accent selection:text-[#0a0a0f]">
         <div className="flex h-svh w-full flex-col overflow-hidden">
           <SessionProvider>

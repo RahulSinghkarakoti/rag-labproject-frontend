@@ -7,9 +7,10 @@ import { cn } from "@/lib/utils";
 interface RerankingFormatterProps {
   data: any;
   variant: "input" | "output";
+  selectedItemIndex?: number;
 }
 
-export function RerankingFormatter({ data, variant }: RerankingFormatterProps) {
+export function RerankingFormatter({ data, variant, selectedItemIndex }: RerankingFormatterProps) {
   const [expandedDocs, setExpandedDocs] = useState<Record<number, boolean>>({});
 
   if (!data) {
@@ -34,13 +35,13 @@ export function RerankingFormatter({ data, variant }: RerankingFormatterProps) {
             Input Candidates for Reranking
           </span>
           {docCount !== null && (
-            <span className="px-2 py-0.5 bg-[#1c1c2e] text-accent font-bold text-[10px]">
+            <span className="px-2 py-0.5 bg-secondary text-accent font-bold text-[10px]">
               {docCount} Candidates Evaluated
             </span>
           )}
         </div>
         {queries.length > 0 && (
-          <div className="p-2.5 bg-[#12121a] border border-[#2a2a3a] cyber-chamfer-sm text-xs space-y-1">
+          <div className="p-2.5 bg-card border border-border cyber-chamfer-sm text-xs space-y-1">
             <span className="text-[10px] text-muted-foreground uppercase block font-bold">Reranking Targets:</span>
             {queries.map((q: string, i: number) => (
               <p key={i} className="text-foreground font-sans text-xs">• {q}</p>
@@ -76,13 +77,14 @@ export function RerankingFormatter({ data, variant }: RerankingFormatterProps) {
       </div>
 
       {documents.length === 0 ? (
-        <div className="p-3 bg-[#12121a] border border-[#2a2a3a] text-[11px] text-muted-foreground">
+        <div className="p-3 bg-card border border-border text-[11px] text-muted-foreground">
           // No reranked documents returned.
         </div>
       ) : (
         <div className="space-y-2">
           {documents.map((doc, idx) => {
-            const isExpanded = !!expandedDocs[idx];
+            const isSelected = selectedItemIndex === idx;
+            const isExpanded = isSelected || !!expandedDocs[idx];
             const content =
               typeof doc === "string"
                 ? doc
@@ -98,14 +100,19 @@ export function RerankingFormatter({ data, variant }: RerankingFormatterProps) {
             return (
               <div
                 key={idx}
-                className="bg-[#12121a] border border-[#2a2a3a] cyber-chamfer-sm overflow-hidden text-xs transition-colors hover:border-accent/30"
+                className={cn(
+                  "bg-card border cyber-chamfer-sm overflow-hidden text-xs transition-all",
+                  isSelected
+                    ? "border-accent ring-1 ring-accent shadow-sm"
+                    : "border-border hover:border-accent/30"
+                )}
               >
                 <div
                   onClick={() => toggleDoc(idx)}
-                  className="p-2.5 flex items-center justify-between cursor-pointer select-none bg-[#161622] border-b border-[#2a2a3a]/60 hover:bg-[#1c1c2e]"
+                  className="p-2.5 flex items-center justify-between cursor-pointer select-none bg-muted/40 border-b border-border/60 hover:bg-muted"
                 >
                   <div className="flex items-center gap-2 overflow-hidden">
-                    <span className="px-1.5 py-0.5 bg-accent text-[#0a0a0f] font-bold text-[10px]">
+                    <span className="px-1.5 py-0.5 bg-accent text-accent-foreground font-bold text-[10px]">
                       #{idx + 1}
                     </span>
                     <FileText className="h-3.5 w-3.5 text-accent shrink-0" />

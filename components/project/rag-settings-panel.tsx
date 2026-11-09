@@ -154,23 +154,23 @@ function FieldInfoButton({ label, info }: { label: string; info?: FieldInfo }) {
               </Button>
             </DialogTrigger>
           </TooltipTrigger>
-          <TooltipContent side="top" className="font-mono text-xs bg-[#12121a] border border-[#2a2a3a] text-foreground">Learn about {label}</TooltipContent>
+          <TooltipContent side="top" className="font-mono text-xs bg-popover border border-border text-popover-foreground">Learn about {label}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent className="max-w-md font-mono bg-[#12121a] border border-[#2a2a3a] text-foreground">
+      <DialogContent className="max-w-md font-mono bg-card border border-border text-foreground max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-accent uppercase tracking-wider">&gt; {label}</DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">{info.description}</DialogDescription>
         </DialogHeader>
-        <div className="cyber-chamfer-sm border border-[#2a2a3a] p-3 space-y-2 mt-2 bg-[#0a0a0f]">
+        <div className="cyber-chamfer-sm border border-border p-3 space-y-2 mt-2 bg-background">
           <div className="flex flex-col">
             <span className="text-accent text-[10px] font-bold uppercase tracking-wider mb-1">When to Use</span>
             <span className="text-[11px] text-muted-foreground leading-relaxed">{info.whenToUse}</span>
           </div>
           {info.consequences && (
-            <div className="flex flex-col mt-2 border-t border-red-900/30 pt-2">
-              <span className="text-red-400 text-[10px] font-bold uppercase tracking-wider mb-1">Warning / Consequence</span>
-              <span className="text-red-200/70 text-[11px] leading-relaxed">{info.consequences}</span>
+            <div className="flex flex-col mt-2 border-t border-destructive/30 pt-2">
+              <span className="text-destructive text-[10px] font-bold uppercase tracking-wider mb-1">Warning / Consequence</span>
+              <span className="text-destructive/80 text-[11px] leading-relaxed">{info.consequences}</span>
             </div>
           )}
         </div>
@@ -405,7 +405,7 @@ export function RagSettingsPanel({ threadId }: { threadId: string | null }) {
     Promise.all(
       thread.knowledge_bases.map(async (kb) => {
         const documents = await api.get<DocumentItem[]>(
-          `/api/projects/${thread.project_id}/knowledge-bases/${kb.id}/documents`,
+          `/projects/${thread.project_id}/knowledge-bases/${kb.id}/documents`,
         );
         return [kb.id, Array.isArray(documents) ? documents : []] as const;
       }),

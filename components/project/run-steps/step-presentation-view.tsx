@@ -13,6 +13,7 @@ import {
   ArrowRight,
   ArrowLeft,
   AlertTriangle,
+  Ban,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { RunStep } from "@/lib/thread-api";
@@ -26,6 +27,7 @@ import { GenericDataView } from "./formatters/generic-data-view";
 interface StepPresentationViewProps {
   step: RunStep;
   focusSection?: "all" | "input" | "output" | "config";
+  selectedItemIndex?: number;
   onSelectPrevStep?: () => void;
   onSelectNextStep?: () => void;
   hasPrev?: boolean;
@@ -35,6 +37,7 @@ interface StepPresentationViewProps {
 export function StepPresentationView({
   step,
   focusSection = "all",
+  selectedItemIndex,
   onSelectPrevStep,
   onSelectNextStep,
   hasPrev = false,
@@ -64,27 +67,28 @@ export function StepPresentationView({
 
   const renderDataView = (data: any, variant: "input" | "output") => {
     const type = step.step_type.toLowerCase();
+    const itemIdx = variant === "output" ? selectedItemIndex : undefined;
 
     if (type.includes("transformation") || type.includes("query")) {
-      return <QueryFormatter data={data} variant={variant} />;
+      return <QueryFormatter data={data} variant={variant} selectedItemIndex={itemIdx} />;
     }
     if (type.includes("retrieval")) {
-      return <RetrievalFormatter data={data} variant={variant} />;
+      return <RetrievalFormatter data={data} variant={variant} selectedItemIndex={itemIdx} />;
     }
     if (type.includes("reranking")) {
-      return <RerankingFormatter data={data} variant={variant} />;
+      return <RerankingFormatter data={data} variant={variant} selectedItemIndex={itemIdx} />;
     }
     if (type.includes("generation")) {
       return <GenerationFormatter data={data} variant={variant} />;
     }
 
-    return <GenericDataView data={data} />;
+    return <GenericDataView data={data} selectedItemIndex={itemIdx} />;
   };
 
   return (
     <div className="space-y-4 font-mono">
       {/* Step Status & Quick Nav Bar */}
-      <div className="flex items-center justify-between p-3 bg-[#12121a] border border-[#2a2a3a] cyber-chamfer-sm text-xs">
+      <div className="flex items-center justify-between p-3 bg-card border border-border cyber-chamfer-sm text-xs">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] text-muted-foreground uppercase">STAGE:</span>
@@ -102,11 +106,14 @@ export function StepPresentationView({
                   ? "text-green-500"
                   : step.status === "failed"
                   ? "text-destructive"
+                  : step.status === "cancelled"
+                  ? "text-amber-500"
                   : "text-yellow-500"
               )}
             >
               {step.status === "completed" && <CheckCircle2 className="h-3 w-3" />}
               {step.status === "failed" && <XCircle className="h-3 w-3" />}
+              {step.status === "cancelled" && <Ban className="h-3 w-3" />}
               {step.status}
             </span>
           </div>
@@ -124,7 +131,7 @@ export function StepPresentationView({
             <button
               onClick={onSelectPrevStep}
               disabled={!hasPrev}
-              className="p-1 px-2 border border-[#2a2a3a] bg-[#1c1c2e] hover:bg-[#2a2a3a] disabled:opacity-30 disabled:pointer-events-none text-muted-foreground hover:text-foreground text-[10px] flex items-center gap-1 transition-colors"
+              className="p-1 px-2 border border-border bg-secondary hover:bg-muted disabled:opacity-30 disabled:pointer-events-none text-muted-foreground hover:text-foreground text-[10px] flex items-center gap-1 transition-colors"
               title="Previous Step"
             >
               <ArrowLeft className="h-3 w-3" />
@@ -133,7 +140,7 @@ export function StepPresentationView({
             <button
               onClick={onSelectNextStep}
               disabled={!hasNext}
-              className="p-1 px-2 border border-[#2a2a3a] bg-[#1c1c2e] hover:bg-[#2a2a3a] disabled:opacity-30 disabled:pointer-events-none text-muted-foreground hover:text-foreground text-[10px] flex items-center gap-1 transition-colors"
+              className="p-1 px-2 border border-border bg-secondary hover:bg-muted disabled:opacity-30 disabled:pointer-events-none text-muted-foreground hover:text-foreground text-[10px] flex items-center gap-1 transition-colors"
               title="Next Step"
             >
               Next
@@ -147,11 +154,11 @@ export function StepPresentationView({
       {step.input && Object.keys(step.input).length > 0 && (focusSection === "all" || focusSection === "input") && (
         <div
           className={cn(
-            "p-3.5 bg-[#12121a]/90 border cyber-chamfer-sm transition-colors",
-            focusSection === "input" ? "border-accent/80 shadow-[0_0_12px_rgba(0,255,136,0.15)]" : "border-[#2a2a3a]"
+            "p-3.5 bg-card/90 border cyber-chamfer-sm transition-colors",
+            focusSection === "input" ? "border-accent ring-1 ring-accent" : "border-border"
           )}
         >
-          <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#2a2a3a]">
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-border">
             <span className="font-bold text-accent uppercase text-[10px] tracking-wider flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-accent inline-block" />
               // INPUT (WHAT WENT IN)
@@ -159,14 +166,14 @@ export function StepPresentationView({
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setRawInput(!rawInput)}
-                className="px-2 py-0.5 text-[10px] uppercase font-bold border border-[#2a2a3a] bg-[#1c1c2e] hover:bg-[#2a2a3a] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                className="px-2 py-0.5 text-[10px] uppercase font-bold border border-border bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
               >
                 {rawInput ? <Eye className="h-2.5 w-2.5" /> : <Code2 className="h-2.5 w-2.5" />}
                 {rawInput ? "Presentation" : "Raw JSON"}
               </button>
               <button
                 onClick={() => handleCopy(JSON.stringify(step.input, null, 2), "input")}
-                className="p-1 px-1.5 text-[10px] border border-[#2a2a3a] bg-[#1c1c2e] hover:bg-[#2a2a3a] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                className="p-1 px-1.5 text-[10px] border border-border bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
                 title="Copy Input JSON"
               >
                 {copiedSection === "input" ? <Check className="h-2.5 w-2.5 text-accent" /> : <Copy className="h-2.5 w-2.5" />}
@@ -175,7 +182,7 @@ export function StepPresentationView({
           </div>
 
           {rawInput ? (
-            <pre className="p-2.5 cyber-chamfer-sm bg-[#0a0a0f] text-foreground font-mono text-[10px] overflow-x-auto border border-[#2a2a3a]">
+            <pre className="p-2.5 cyber-chamfer-sm bg-background text-foreground font-mono text-[10px] overflow-x-auto border border-border">
               {JSON.stringify(step.input, null, 2)}
             </pre>
           ) : (
@@ -188,11 +195,11 @@ export function StepPresentationView({
       {step.config && Object.keys(step.config).length > 0 && (focusSection === "all" || focusSection === "config") && (
         <div
           className={cn(
-            "p-3.5 bg-[#12121a]/90 border cyber-chamfer-sm transition-colors",
-            focusSection === "config" ? "border-accent/80 shadow-[0_0_12px_rgba(0,255,136,0.15)]" : "border-[#2a2a3a]"
+            "p-3.5 bg-card/90 border cyber-chamfer-sm transition-colors",
+            focusSection === "config" ? "border-accent ring-1 ring-accent" : "border-border"
           )}
         >
-          <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#2a2a3a]">
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-border">
             <span className="font-bold text-accent uppercase text-[10px] tracking-wider flex items-center gap-1.5">
               <SlidersHorizontal className="h-3 w-3 text-accent" />
               // CONFIGURATION (PARAMETERS USED)
@@ -200,14 +207,14 @@ export function StepPresentationView({
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setRawConfig(!rawConfig)}
-                className="px-2 py-0.5 text-[10px] uppercase font-bold border border-[#2a2a3a] bg-[#1c1c2e] hover:bg-[#2a2a3a] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                className="px-2 py-0.5 text-[10px] uppercase font-bold border border-border bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
               >
                 {rawConfig ? <Eye className="h-2.5 w-2.5" /> : <Code2 className="h-2.5 w-2.5" />}
                 {rawConfig ? "Presentation" : "Raw JSON"}
               </button>
               <button
                 onClick={() => handleCopy(JSON.stringify(step.config, null, 2), "config")}
-                className="p-1 px-1.5 text-[10px] border border-[#2a2a3a] bg-[#1c1c2e] hover:bg-[#2a2a3a] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                className="p-1 px-1.5 text-[10px] border border-border bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
                 title="Copy Config JSON"
               >
                 {copiedSection === "config" ? <Check className="h-2.5 w-2.5 text-accent" /> : <Copy className="h-2.5 w-2.5" />}
@@ -216,7 +223,7 @@ export function StepPresentationView({
           </div>
 
           {rawConfig ? (
-            <pre className="p-2.5 cyber-chamfer-sm bg-[#0a0a0f] text-foreground font-mono text-[10px] overflow-x-auto border border-[#2a2a3a]">
+            <pre className="p-2.5 cyber-chamfer-sm bg-background text-foreground font-mono text-[10px] overflow-x-auto border border-border">
               {JSON.stringify(step.config, null, 2)}
             </pre>
           ) : (
@@ -229,11 +236,11 @@ export function StepPresentationView({
       {step.output && (focusSection === "all" || focusSection === "output") && (
         <div
           className={cn(
-            "p-3.5 bg-[#12121a]/90 border cyber-chamfer-sm transition-colors",
-            focusSection === "output" ? "border-accent/80 shadow-[0_0_12px_rgba(0,255,136,0.15)]" : "border-[#2a2a3a]"
+            "p-3.5 bg-card/90 border cyber-chamfer-sm transition-colors",
+            focusSection === "output" ? "border-accent ring-1 ring-accent" : "border-border"
           )}
         >
-          <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#2a2a3a]">
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-border">
             <span className="font-bold text-accent uppercase text-[10px] tracking-wider flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-accent inline-block" />
               // OUTPUT (WHAT CAME OUT)
@@ -241,14 +248,14 @@ export function StepPresentationView({
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setRawOutput(!rawOutput)}
-                className="px-2 py-0.5 text-[10px] uppercase font-bold border border-[#2a2a3a] bg-[#1c1c2e] hover:bg-[#2a2a3a] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                className="px-2 py-0.5 text-[10px] uppercase font-bold border border-border bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
               >
                 {rawOutput ? <Eye className="h-2.5 w-2.5" /> : <Code2 className="h-2.5 w-2.5" />}
                 {rawOutput ? "Presentation" : "Raw JSON"}
               </button>
               <button
                 onClick={() => handleCopy(JSON.stringify(step.output, null, 2), "output")}
-                className="p-1 px-1.5 text-[10px] border border-[#2a2a3a] bg-[#1c1c2e] hover:bg-[#2a2a3a] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                className="p-1 px-1.5 text-[10px] border border-border bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
                 title="Copy Output JSON"
               >
                 {copiedSection === "output" ? <Check className="h-2.5 w-2.5 text-accent" /> : <Copy className="h-2.5 w-2.5" />}
@@ -257,7 +264,7 @@ export function StepPresentationView({
           </div>
 
           {rawOutput ? (
-            <pre className="p-2.5 cyber-chamfer-sm bg-[#0a0a0f] text-foreground font-mono text-[10px] overflow-x-auto border border-[#2a2a3a]">
+            <pre className="p-2.5 cyber-chamfer-sm bg-background text-foreground font-mono text-[10px] overflow-x-auto border border-border">
               {JSON.stringify(step.output, null, 2)}
             </pre>
           ) : (

@@ -12,6 +12,8 @@ export interface DataArtifactNodeData extends Record<string, unknown> {
   badgeCount?: number;
   previewText?: string;
   fullData: unknown;
+  itemIndex?: number;
+  totalItems?: number;
   isSelected?: boolean;
 }
 
@@ -27,4 +29,4 @@ export interface StepProcessNodeData extends Record<string, unknown> {
 export type SelectedNodeTarget =
   | { type: "step"; stepId: string }
   | { type: "input"; stepId: string }
-  | { type: "output"; stepId: string };
+  | { type: "output"; stepId: string; itemIndex?: number };

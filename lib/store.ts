@@ -135,7 +135,7 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   fetchProjects: async () => {
     set({ status: "loading", error: null });
     try {
-      const projects = await api.get<Project[]>("/api/projects");
+      const projects = await api.get<Project[]>("/projects");
       set({ projects: projects ?? [], status: "idle" });
     } catch (error) {
       set({ status: "error", error: error instanceof Error ? error.message : "Request failed" });
@@ -146,7 +146,7 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   fetchProject: async (id: string) => {
     set({ status: "loading", error: null });
     try {
-      const project = await api.get<Project>(`/api/projects/${id}`);
+      const project = await api.get<Project>(`/projects/${id}`);
       set({ currentProject: project, status: "idle" });
       return project;
     } catch (error) {
@@ -160,7 +160,7 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   createProject: async (input) => {
     set({ status: "saving", error: null });
     try {
-      const project = await api.post<Project, ProjectInput>("/api/projects", input);
+      const project = await api.post<Project, ProjectInput>("/projects", input);
       set((state) => ({ projects: [...state.projects, project], status: "idle" }));
       return project;
     } catch (error) {
@@ -172,7 +172,7 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   updateProject: async (input, project_id) => {
     set({ status: "updating", error: null });
     try {
-      const project = await api.patch<Project, ProjectInput>(`/api/projects/${project_id}`, input);
+      const project = await api.patch<Project, ProjectInput>(`/projects/${project_id}`, input);
       set((state) => {
         const projects = state.projects.map((p) => (p.id === project_id ? project : p));
         return { projects, status: "idle" };
@@ -187,7 +187,7 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   deleteProject: async (project_id) => {
     set({ status: "deleting", error: null });
     try {
-      await api.delete(`/api/projects/${project_id}`);
+      await api.delete(`/projects/${project_id}`);
       set((state) => ({
         projects: state.projects.filter((p) => p.id !== project_id),
         status: "idle",
@@ -213,7 +213,7 @@ export const useKnowledgeBaseStore = create<KnowledgeBaseStore>((set, get) => ({
   fetchKnowledgeBases: async (projectId: string) => {
     set({ status: "loading", error: null });
     try {
-      const data = await api.get<KnowledgeBase[]>(`/api/projects/${projectId}/knowledge-bases`);
+      const data = await api.get<KnowledgeBase[]>(`/projects/${projectId}/knowledge-bases`);
       const kbs = data ?? [];
       const currentSelected = get().selectedKnowledgeBaseId;
       const validSelected = kbs.some((k) => k.id === currentSelected)
@@ -231,7 +231,7 @@ export const useKnowledgeBaseStore = create<KnowledgeBaseStore>((set, get) => ({
     set({ status: "saving", error: null });
     try {
       const newKb = await api.post<KnowledgeBase, CreateKnowledgeBaseInput>(
-        `/api/projects/${projectId}/knowledge-bases`,
+        `/projects/${projectId}/knowledge-bases`,
         input,
       );
       set((state) => ({
@@ -249,7 +249,7 @@ export const useKnowledgeBaseStore = create<KnowledgeBaseStore>((set, get) => ({
   deleteKnowledgeBase: async (projectId: string, kbId: string) => {
     set({ status: "deleting", error: null });
     try {
-      await api.delete(`/api/projects/${projectId}/knowledge-bases/${kbId}`);
+      await api.delete(`/projects/${projectId}/knowledge-bases/${kbId}`);
       set((state) => {
         const remaining = state.knowledgeBases.filter((k) => k.id !== kbId);
         const nextSelected =
@@ -280,7 +280,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     set({ status: "loading", error: null });
     try {
       const data = await api.get<DocumentItem[]>(
-        `/api/projects/${projectId}/knowledge-bases/${kbId}/documents`,
+        `/projects/${projectId}/knowledge-bases/${kbId}/documents`,
       );
       const docs = Array.isArray(data) ? data : [];
       const readyIds = docs.filter((d) => isDocumentReady(d.status)).map((d) => d.id);
@@ -308,7 +308,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
         knowledge_base_id: string;
         documents: DocumentItem[];
         total: number;
-      }>(`/api/projects/${projectId}/knowledge-bases/${kbId}/upload-files`, formData);
+      }>(`/projects/${projectId}/knowledge-bases/${kbId}/upload-files`, formData);
 
       const uploadedDocs = result?.documents ?? [];
       set((state) => {
@@ -334,7 +334,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
   deleteDocument: async (projectId: string, kbId: string, docId: string) => {
     set({ status: "deleting", error: null });
     try {
-      await api.delete(`/api/projects/${projectId}/knowledge-bases/${kbId}/documents/${docId}`);
+      await api.delete(`/projects/${projectId}/knowledge-bases/${kbId}/documents/${docId}`);
       set((state) => ({
         documents: state.documents.filter((d) => d.id !== docId),
         selectedDocumentIds: state.selectedDocumentIds.filter((id) => id !== docId),

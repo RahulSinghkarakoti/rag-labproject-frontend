@@ -47,8 +47,11 @@ export type SendThreadMessageInput = {
 
 async function streamThreadMessage(path: string, content?: string, signal?: AbortSignal) {
   const session = (await getCachedSession()) as { accessToken?: string } | null;
+  const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1").replace(/\/+$/, "");
+  const cleanPath = path.replace(/^\/api(?:\/v1)?(?=\/|$)/, "") || "/";
+  const url = `${baseUrl}${cleanPath.startsWith("/") ? "" : "/"}${cleanPath}`;
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}${path}`,
+    url,
     {
       method: "POST",
       credentials: "include",
@@ -116,29 +119,29 @@ export type RunDetails = {
 };
 
 export const threadApi = {
-  list: (projectId: string) => api.get<Thread[]>(`/api/v1/projects/${projectId}/threads`),
-  messages: (threadId: string) => api.get<ThreadMessage[]>(`/api/v1/threads/${threadId}/messages`),
+  list: (projectId: string) => api.get<Thread[]>(`/projects/${projectId}/threads`),
+  messages: (threadId: string) => api.get<ThreadMessage[]>(`/threads/${threadId}/messages`),
   sendMessage: (threadId: string, { content, signal }: SendThreadMessageInput) =>
-    streamThreadMessage(`/api/v1/threads/${threadId}/messages`, content, signal),
+    streamThreadMessage(`/threads/${threadId}/messages`, content, signal),
   editMessage: (threadId: string, messageId: string, content: string, signal?: AbortSignal) =>
-    streamThreadMessage(`/api/v1/threads/${threadId}/messages/${messageId}/edit`, content, signal),
+    streamThreadMessage(`/threads/${threadId}/messages/${messageId}/edit`, content, signal),
   retryMessage: (threadId: string, messageId: string, signal?: AbortSignal) =>
-    streamThreadMessage(`/api/v1/threads/${threadId}/messages/${messageId}/retry`, undefined, signal),
+    streamThreadMessage(`/threads/${threadId}/messages/${messageId}/retry`, undefined, signal),
   latestPipeline: (threadId: string) =>
-    api.get<PipelineVersion>(`/api/v1/threads/${threadId}/pipeline/latest`),
+    api.get<PipelineVersion>(`/threads/${threadId}/pipeline/latest`),
   create: (projectId: string, input: CreateThreadInput) =>
-    api.post<Thread, CreateThreadInput>(`/api/v1/projects/${projectId}/threads`, {
+    api.post<Thread, CreateThreadInput>(`/projects/${projectId}/threads`, {
       ...input,
       config: threadConfigSchema.parse(input.config),
     }),
   update: (threadId: string, input: Partial<CreateThreadInput>) =>
-    api.patch<Thread, Partial<CreateThreadInput>>(`/api/v1/threads/${threadId}`, {
+    api.patch<Thread, Partial<CreateThreadInput>>(`/threads/${threadId}`, {
       ...input,
       ...(input.config ? { config: threadConfigSchema.parse(input.config) } : {}),
     }),
-  remove: (threadId: string) => api.delete(`/api/v1/threads/${threadId}`),
+  remove: (threadId: string) => api.delete(`/threads/${threadId}`),
   runSteps: (messageId: string) =>
-    api.get<RunDetails>(`/api/v1/messages/${messageId}/run-steps`),
+    api.get<RunDetails>(`/messages/${messageId}/run-steps`),
   cancelRun: (runId: string) =>
-    api.post(`/api/v1/runs/${runId}/cancel`),
+    api.post(`/runs/${runId}/cancel`),
 };

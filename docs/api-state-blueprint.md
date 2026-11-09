@@ -20,7 +20,7 @@ store only when more than one component/page needs it.
 ## API conventions
 
 - FastAPI returns JSON matching the TypeScript type for that resource.
-- Use resource paths such as `GET /api/projects` and `POST /api/projects`.
+- Use resource paths such as `GET /projects` and `POST /projects`.
 - Use the matching method from `@/lib/api`: `api.get`, `api.post`, `api.put`,
   `api.patch`, or `api.delete`.
 - Pass request data as the second argument to `post`, `put`, and `patch`.
@@ -28,16 +28,16 @@ store only when more than one component/page needs it.
 - Treat non-2xx responses as errors. Show `store.error` in the nearest useful UI.
 - Keep auth tokens out of Zustand and localStorage. Use the existing auth/cookie flow.
 - Set `NEXT_PUBLIC_API_BASE_URL` to the FastAPI origin, for example
-  `http://localhost:8000`.
+  `http://localhost:8000/api/v1`.
 
 ## Request method convention
 
 ```ts
-const projects = await api.get<Project[]>("/api/projects");
-const created = await api.post<Project, ProjectInput>("/api/projects", input);
-await api.put<Project, ProjectInput>(`/api/projects/${id}`, input);
-await api.patch<Project, Partial<Project>>(`/api/projects/${id}`, { name });
-await api.delete<void>(`/api/projects/${id}`);
+const projects = await api.get<Project[]>("/projects");
+const created = await api.post<Project, ProjectInput>("/projects", input);
+await api.put<Project, ProjectInput>(`/projects/${id}`, input);
+await api.patch<Project, Partial<Project>>(`/projects/${id}`, { name });
+await api.delete<void>(`/projects/${id}`);
 ```
 
 The method is selected by the helper name. The first generic is the response
@@ -45,7 +45,7 @@ type; the second generic is the request-body type for `post`, `put`, and
 `patch`. Query parameters go in Axios config:
 
 ```ts
-api.get<Project[]>("/api/projects", { params: { page: 1 } });
+api.get<Project[]>("/projects", { params: { page: 1 } });
 ```
 
 ## Read flow

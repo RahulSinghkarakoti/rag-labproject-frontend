@@ -115,7 +115,7 @@ export function ThreadPanel({ projectId, canCreate = true }: { projectId: string
             </div>
             <div className="space-y-1.5">
               <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Select Knowledge Bases</p>
-              <div className="max-h-52 space-y-2 overflow-y-auto cyber-chamfer-sm border border-[#2a2a3a] bg-[#0a0a0f] p-3">
+              <div className="max-h-52 space-y-2 overflow-y-auto cyber-chamfer-sm border border-border bg-background p-3">
                 {availableKnowledgeBases.map((kb) => (
                   <label key={kb.id} className="flex cursor-pointer items-center gap-2 text-xs font-bold uppercase text-foreground">
                     <input
@@ -147,7 +147,7 @@ export function ThreadPanel({ projectId, canCreate = true }: { projectId: string
           }
         }}
       >
-        <DialogContent className="border-[#2a2a3a] bg-[#0d0d14] font-mono text-foreground sm:max-w-md">
+        <DialogContent className="border-border bg-card font-mono text-foreground sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="uppercase tracking-wider text-destructive text-base flex items-center gap-2">
               <Trash2 className="size-4 text-destructive" />

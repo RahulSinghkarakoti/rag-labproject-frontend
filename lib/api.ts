@@ -23,8 +23,11 @@ export async function getCachedSession(forceRefresh = false) {
   return cachedSession;
 }
 
+const rawBaseURL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+const baseURL = rawBaseURL.replace(/\/+$/, "");
+
 const client = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000",
+  baseURL,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });
@@ -60,6 +63,10 @@ function refreshSession() {
 }
 
 client.interceptors.request.use(async (config) => {
+  if (config.url) {
+    config.url = config.url.replace(/^\/api(?:\/v1)?(?=\/|$)/, "") || "/";
+  }
+
   const session = (await getCachedSession()) as (Awaited<ReturnType<typeof getSession>> & {
     accessToken?: string;
     error?: string;

@@ -1,12 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { Thread } from "@/components/assistant-ui/elements/thread.aui";
-import { Database, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight } from "lucide-react";
+import { PanelLeftClose, PanelLeft, PanelRightClose, PanelRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useThreadStore } from "@/lib/thread-store";
-import type { KnowledgeBase } from "@/lib/store";
-import { KbDetailsDialog } from "@/components/project/kb-details-dialog";
+import { ThemeTriggerButton } from "@/components/theme-dialog";
 
 export function ProjectChat({ 
   enabled = true,
@@ -27,9 +24,6 @@ export function ProjectChat({
   onToggleLeftPanel?: () => void;
   onToggleRightPanel?: () => void;
 }) {
-  const activeThread = useThreadStore((s) => s.threads.find((t) => t.id === s.selectedThreadId));
-  const [inspectKb, setInspectKb] = useState<KnowledgeBase | null>(null);
-
   return (
     <section className="min-w-0 flex-1 flex flex-col bg-[#0a0a0f] relative font-mono text-foreground h-full">
       <div className="flex h-12 items-center justify-between border-b border-[#2a2a3a] px-4 bg-[#12121a] shrink-0">
@@ -49,21 +43,9 @@ export function ProjectChat({
             <p className="text-xs font-bold uppercase tracking-wider text-accent">&gt; QUERY_TERMINAL</p>
             <p className="text-[10px] text-muted-foreground uppercase hidden sm:block">Grounded RAG retrieval channel</p>
           </div>
-          {activeThread?.knowledge_bases?.map((kb) => (
-            <button
-              key={kb.id}
-              type="button"
-              onClick={() => setInspectKb(kb)}
-              className="hidden lg:inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-mono border border-[#2a2a3a] bg-[#0a0a0f] hover:border-accent text-muted-foreground hover:text-accent transition-colors cyber-chamfer-sm"
-              title={`Inspect specifications for ${kb.name}`}
-            >
-              <Database className="size-2.5 text-accent" />
-              <span className="truncate max-w-[120px] text-foreground font-bold">{kb.name}</span>
-              <span className="text-[9px] text-accent font-semibold">[SPECS]</span>
-            </button>
-          ))}
         </div>
         <div className="flex items-center gap-2">
+          <ThemeTriggerButton />
           {onToggleRightPanel && (
             <Button
               variant="ghost"
@@ -101,12 +83,6 @@ export function ProjectChat({
         ) : null}
         <Thread />
       </div>
-
-      <KbDetailsDialog
-        kb={inspectKb}
-        open={Boolean(inspectKb)}
-        onOpenChange={(open) => !open && setInspectKb(null)}
-      />
     </section>
   );
 }

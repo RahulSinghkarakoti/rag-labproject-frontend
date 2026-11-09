@@ -1,8 +1,15 @@
 import { MarkerType, type Node, type Edge } from "@xyflow/react";
 import type { RunDetails, RunStep } from "@/lib/thread-api";
-import type { DataArtifactNodeData, StepProcessNodeData } from "./types";
+import type { DataArtifactNodeData, StepProcessNodeData, SelectedNodeTarget } from "./types";
 
 export type FlowchartLayoutMode = "rows" | "horizontal";
+
+export interface GraphThemeTokens {
+  border?: string;
+  accent?: string;
+  card?: string;
+  foreground?: string;
+}
 
 const STEP_TITLES: Record<string, string> = {
   query_transformation: "Query Transformation",
@@ -13,13 +20,43 @@ const STEP_TITLES: Record<string, string> = {
   generation: "LLM Generation",
 };
 
+export function getStepOutputItems(step: RunStep): unknown[] | null {
+  const output = step.output;
+  if (!output) return null;
+
+  // Direct array
+  if (Array.isArray(output)) {
+    return output;
+  }
+
+  // Object wrapping an array for known stages (excluding generation)
+  const stepType = step.step_type.toLowerCase();
+  if (!stepType.includes("generation") && typeof output === "object" && output !== null) {
+    const obj = output as Record<string, unknown>;
+    if (Array.isArray(obj.transformed_queries)) return obj.transformed_queries;
+    if (Array.isArray(obj.retrieved_documents)) return obj.retrieved_documents;
+    if (Array.isArray(obj.reranked_documents)) return obj.reranked_documents;
+    if (Array.isArray(obj.documents)) return obj.documents;
+    if (Array.isArray(obj.queries)) return obj.queries;
+    if (Array.isArray(obj.items)) return obj.items;
+    if (Array.isArray(obj.results)) return obj.results;
+  }
+
+  return null;
+}
+
 export function buildPipelineGraph(
   runDetails: RunDetails,
-  selectedTarget: { type: "step" | "input" | "output"; stepId: string } | null,
-  layoutMode: FlowchartLayoutMode = "rows"
+  selectedTarget: SelectedNodeTarget | null,
+  layoutMode: FlowchartLayoutMode = "horizontal",
+  themeTokens?: GraphThemeTokens
 ): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
+
+  const strokeNormal = themeTokens?.border || "var(--border)";
+  const strokeActive = themeTokens?.accent || "var(--accent)";
+  const cardBg = themeTokens?.card || "var(--card)";
 
   const steps = runDetails.steps || [];
   if (steps.length === 0) return { nodes, edges };
@@ -29,21 +66,23 @@ export function buildPipelineGraph(
   const STEP_WIDTH = 250;
   const OUTPUT_WIDTH = 210;
   const ESTIMATED_HEIGHT = 120;
+  const ITEM_GAP_Y = 16;
 
-  // Staged Rows mode:
-  // Each stage occupies one horizontal row with: [Input] -> [Step Process] -> [Output]
-  // Stages are stacked vertically: Stage 1, Stage 2, Stage 3, Stage 4
-  // Lineage edge connects Output of Stage N to Input of Stage N+1
-  const ROW_HEIGHT = 160;
+  // Staged Rows mode constants:
   const ROW_START_X = 40;
   const ROW_START_Y = 40;
   const ROW_INTERNAL_GAP = 40;
+  const STAGE_ROW_GAP = 50;
+  let currentStageY = ROW_START_Y;
 
-  // Horizontal conveyor mode constants
+  // Horizontal conveyor mode constants:
   const HORIZ_INTERNAL_GAP = 40;
   const HORIZ_STAGE_GAP = 80;
+  const HORIZ_CENTER_Y = 100;
   let horizCurrentX = 40;
-  const HORIZ_CENTER_Y = 60;
+
+  // Track output node IDs for each step to connect lineage to downstream stages
+  const stepOutputNodeIds: Record<string, string[]> = {};
 
   steps.forEach((step, idx) => {
     const title = STEP_TITLES[step.step_type] || step.step_type.replace(/_/g, " ");
@@ -73,22 +112,56 @@ export function buildPipelineGraph(
       }
     }
 
-    // Determine positions based on layoutMode
+    // Determine output items
+    const outputItems = getStepOutputItems(step);
+    const isArrayOutput = outputItems !== null && outputItems.length > 0;
+    const outputCount = isArrayOutput ? outputItems.length : 1;
+
+    // Calculate heights and positions
+    const totalOutputHeight = outputCount * ESTIMATED_HEIGHT + (outputCount - 1) * ITEM_GAP_Y;
+    const stageHeight = Math.max(ESTIMATED_HEIGHT, totalOutputHeight);
+
     let inputPos = { x: 0, y: 0 };
     let stepPos = { x: 0, y: 0 };
-    let outputPos = { x: 0, y: 0 };
+    const outputPositions: { x: number; y: number }[] = [];
 
     if (layoutMode === "rows") {
-      const y = ROW_START_Y + idx * ROW_HEIGHT;
-      inputPos = { x: ROW_START_X, y };
-      stepPos = { x: ROW_START_X + INPUT_WIDTH + ROW_INTERNAL_GAP, y };
-      outputPos = { x: stepPos.x + STEP_WIDTH + ROW_INTERNAL_GAP, y };
+      const centerY = currentStageY + (stageHeight - ESTIMATED_HEIGHT) / 2;
+      inputPos = { x: ROW_START_X, y: centerY };
+      stepPos = { x: ROW_START_X + INPUT_WIDTH + ROW_INTERNAL_GAP, y: centerY };
+      const outputX = stepPos.x + STEP_WIDTH + ROW_INTERNAL_GAP;
+
+      if (!isArrayOutput) {
+        outputPositions.push({ x: outputX, y: centerY });
+      } else {
+        for (let j = 0; j < outputCount; j++) {
+          outputPositions.push({
+            x: outputX,
+            y: currentStageY + j * (ESTIMATED_HEIGHT + ITEM_GAP_Y),
+          });
+        }
+      }
+
+      currentStageY += stageHeight + STAGE_ROW_GAP;
     } else {
-      const y = HORIZ_CENTER_Y;
-      inputPos = { x: horizCurrentX, y };
-      stepPos = { x: horizCurrentX + INPUT_WIDTH + HORIZ_INTERNAL_GAP, y };
-      outputPos = { x: stepPos.x + STEP_WIDTH + HORIZ_INTERNAL_GAP, y };
-      horizCurrentX = outputPos.x + OUTPUT_WIDTH + HORIZ_STAGE_GAP;
+      // Horizontal conveyor mode
+      inputPos = { x: horizCurrentX, y: HORIZ_CENTER_Y };
+      stepPos = { x: horizCurrentX + INPUT_WIDTH + HORIZ_INTERNAL_GAP, y: HORIZ_CENTER_Y };
+      const outputX = stepPos.x + STEP_WIDTH + HORIZ_INTERNAL_GAP;
+
+      if (!isArrayOutput) {
+        outputPositions.push({ x: outputX, y: HORIZ_CENTER_Y });
+      } else {
+        const startY = HORIZ_CENTER_Y + (ESTIMATED_HEIGHT - totalOutputHeight) / 2;
+        for (let j = 0; j < outputCount; j++) {
+          outputPositions.push({
+            x: outputX,
+            y: startY + j * (ESTIMATED_HEIGHT + ITEM_GAP_Y),
+          });
+        }
+      }
+
+      horizCurrentX = outputX + OUTPUT_WIDTH + HORIZ_STAGE_GAP;
     }
 
     // 1. INPUT NODE
@@ -138,32 +211,6 @@ export function buildPipelineGraph(
       } as StepProcessNodeData,
     });
 
-    // 3. OUTPUT NODE
-    const outputNodeId = `out-${step.id}`;
-    const outputSummary = extractOutputSummary(step);
-
-    nodes.push({
-      id: outputNodeId,
-      type: "ragDataNode",
-      position: outputPos,
-      width: OUTPUT_WIDTH,
-      height: ESTIMATED_HEIGHT,
-      initialWidth: OUTPUT_WIDTH,
-      initialHeight: ESTIMATED_HEIGHT,
-      data: {
-        stepId: step.id,
-        stepSequence: step.sequence,
-        stepType: step.step_type,
-        variant: "output",
-        label: `${title} Output`,
-        subLabel: outputSummary.subLabel,
-        badgeCount: outputSummary.badgeCount,
-        previewText: outputSummary.previewText,
-        fullData: step.output,
-        isSelected: isOutputSelected,
-      } as DataArtifactNodeData,
-    });
-
     // EDGE 1: Input Node -> Step Process Node
     edges.push({
       id: `edge-${inputNodeId}-to-${stepNodeId}`,
@@ -175,85 +222,186 @@ export function buildPipelineGraph(
       animated: isInputSelected || isStepSelected,
       markerEnd: {
         type: MarkerType.ArrowClosed,
-        color: isInputSelected || isStepSelected ? "var(--accent)" : "#5a5a70",
+        color: isInputSelected || isStepSelected ? strokeActive : strokeNormal,
       },
       style: {
-        stroke: isInputSelected || isStepSelected ? "var(--accent)" : "#3a3a50",
+        stroke: isInputSelected || isStepSelected ? strokeActive : strokeNormal,
         strokeWidth: isInputSelected || isStepSelected ? 2.5 : 1.75,
       },
     });
 
-    // EDGE 2: Step Process Node -> Output Node
-    edges.push({
-      id: `edge-${stepNodeId}-to-${outputNodeId}`,
-      source: stepNodeId,
-      target: outputNodeId,
-      sourceHandle: "right",
-      targetHandle: "left",
-      type: "smoothstep",
-      animated: isStepSelected || isOutputSelected,
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: isStepSelected || isOutputSelected ? "var(--accent)" : "#5a5a70",
-      },
-      style: {
-        stroke: isStepSelected || isOutputSelected ? "var(--accent)" : "#3a3a50",
-        strokeWidth: isStepSelected || isOutputSelected ? 2.5 : 1.75,
-      },
-    });
+    // 3. OUTPUT NODE(S)
+    const currentStepOutputIds: string[] = [];
 
-    // EDGE 3: Connect Output of Stage N -> Input of Stage N+1 (Pipeline lineage)
+    if (!isArrayOutput) {
+      // Single output node
+      const outputNodeId = `out-${step.id}`;
+      currentStepOutputIds.push(outputNodeId);
+      const outputSummary = extractOutputSummary(step);
+
+      nodes.push({
+        id: outputNodeId,
+        type: "ragDataNode",
+        position: outputPositions[0],
+        width: OUTPUT_WIDTH,
+        height: ESTIMATED_HEIGHT,
+        initialWidth: OUTPUT_WIDTH,
+        initialHeight: ESTIMATED_HEIGHT,
+        data: {
+          stepId: step.id,
+          stepSequence: step.sequence,
+          stepType: step.step_type,
+          variant: "output",
+          label: `${title} Output`,
+          subLabel: outputSummary.subLabel,
+          badgeCount: outputSummary.badgeCount,
+          previewText: outputSummary.previewText,
+          fullData: step.output,
+          isSelected: isOutputSelected,
+        } as DataArtifactNodeData,
+      });
+
+      // EDGE 2: Step Process Node -> Output Node
+      edges.push({
+        id: `edge-${stepNodeId}-to-${outputNodeId}`,
+        source: stepNodeId,
+        target: outputNodeId,
+        sourceHandle: "right",
+        targetHandle: "left",
+        type: "smoothstep",
+        animated: isStepSelected || isOutputSelected,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: isStepSelected || isOutputSelected ? strokeActive : strokeNormal,
+        },
+        style: {
+          stroke: isStepSelected || isOutputSelected ? strokeActive : strokeNormal,
+          strokeWidth: isStepSelected || isOutputSelected ? 2.5 : 1.75,
+        },
+      });
+    } else {
+      // Multiple output nodes (one for each array item)
+      outputItems!.forEach((item, itemIdx) => {
+        const outputNodeId = `out-${step.id}-${itemIdx}`;
+        currentStepOutputIds.push(outputNodeId);
+
+        const itemSummary = extractOutputItemSummary(
+          item,
+          itemIdx,
+          outputItems!.length,
+          step.step_type
+        );
+
+        const isThisItemSelected =
+          isOutputSelected &&
+          (selectedTarget?.itemIndex === undefined || selectedTarget.itemIndex === itemIdx);
+
+        nodes.push({
+          id: outputNodeId,
+          type: "ragDataNode",
+          position: outputPositions[itemIdx],
+          width: OUTPUT_WIDTH,
+          height: ESTIMATED_HEIGHT,
+          initialWidth: OUTPUT_WIDTH,
+          initialHeight: ESTIMATED_HEIGHT,
+          data: {
+            stepId: step.id,
+            stepSequence: step.sequence,
+            stepType: step.step_type,
+            variant: "output",
+            label: itemSummary.label,
+            subLabel: itemSummary.subLabel,
+            previewText: itemSummary.previewText,
+            itemIndex: itemIdx,
+            totalItems: outputItems!.length,
+            fullData: item,
+            isSelected: isThisItemSelected,
+          } as DataArtifactNodeData,
+        });
+
+        // EDGE 2: Step Process Node -> Item Output Node
+        const isEdgeActive = isStepSelected || isThisItemSelected;
+        edges.push({
+          id: `edge-${stepNodeId}-to-${outputNodeId}`,
+          source: stepNodeId,
+          target: outputNodeId,
+          sourceHandle: "right",
+          targetHandle: "left",
+          type: "smoothstep",
+          animated: isEdgeActive,
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: isEdgeActive ? strokeActive : strokeNormal,
+          },
+          style: {
+            stroke: isEdgeActive ? strokeActive : strokeNormal,
+            strokeWidth: isEdgeActive ? 2.5 : 1.75,
+          },
+        });
+      });
+    }
+
+    stepOutputNodeIds[step.id] = currentStepOutputIds;
+
+    // EDGE 3: Connect Output(s) of Stage N -> Input of Stage N+1 (Pipeline lineage)
     if (idx < steps.length - 1) {
       const nextStep = steps[idx + 1];
       const nextInputNodeId = `in-${nextStep.id}`;
 
       if (layoutMode === "rows") {
-        // Lineage flows down from Output bottom handle to next Input left handle
+        // Lineage flows down from the last output node bottom handle to next Input left handle
+        const sourceNodeId = currentStepOutputIds[currentStepOutputIds.length - 1];
         edges.push({
           id: `edge-lineage-${step.id}-to-${nextStep.id}`,
-          source: outputNodeId,
+          source: sourceNodeId,
           target: nextInputNodeId,
           sourceHandle: "bottom",
           targetHandle: "left",
           type: "smoothstep",
           animated: true,
           label: "NEXT STAGE",
-          labelStyle: { fill: "#00d4ff", fontSize: 9, fontFamily: "monospace", fontWeight: 700 },
-          labelBgStyle: { fill: "#12121a", fillOpacity: 0.85 },
+          labelStyle: { fill: strokeActive, fontSize: 9, fontFamily: "monospace", fontWeight: 700 },
+          labelBgStyle: { fill: cardBg, fillOpacity: 0.95 },
           labelBgPadding: [4, 2] as [number, number],
           style: {
-            stroke: "#00d4ff",
+            stroke: strokeActive,
             strokeWidth: 2,
             strokeDasharray: "4 4",
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: "#00d4ff",
+            color: strokeActive,
           },
         });
       } else {
-        // Lineage flows horizontally to the right
-        edges.push({
-          id: `edge-lineage-${step.id}-to-${nextStep.id}`,
-          source: outputNodeId,
-          target: nextInputNodeId,
-          sourceHandle: "right",
-          targetHandle: "left",
-          type: "smoothstep",
-          animated: true,
-          label: "NEXT STAGE",
-          labelStyle: { fill: "#00d4ff", fontSize: 9, fontFamily: "monospace", fontWeight: 700 },
-          labelBgStyle: { fill: "#12121a", fillOpacity: 0.85 },
-          labelBgPadding: [4, 2] as [number, number],
-          style: {
-            stroke: "#00d4ff",
-            strokeWidth: 2,
-            strokeDasharray: "4 4",
-          },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: "#00d4ff",
-          },
+        // Horizontal conveyor: all output nodes connect into the next stage input
+        const middleIdx = Math.floor(currentStepOutputIds.length / 2);
+        currentStepOutputIds.forEach((outNodeId, outIdx) => {
+          const isMiddle = outIdx === middleIdx;
+          edges.push({
+            id: `edge-lineage-${outNodeId}-to-${nextStep.id}`,
+            source: outNodeId,
+            target: nextInputNodeId,
+            sourceHandle: "right",
+            targetHandle: "left",
+            type: "smoothstep",
+            animated: true,
+            label: isMiddle ? "NEXT STAGE" : undefined,
+            labelStyle: isMiddle
+              ? { fill: strokeActive, fontSize: 9, fontFamily: "monospace", fontWeight: 700 }
+              : undefined,
+            labelBgStyle: isMiddle ? { fill: cardBg, fillOpacity: 0.95 } : undefined,
+            labelBgPadding: isMiddle ? ([4, 2] as [number, number]) : undefined,
+            style: {
+              stroke: strokeActive,
+              strokeWidth: 2,
+              strokeDasharray: "4 4",
+            },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: strokeActive,
+            },
+          });
         });
       }
     }
@@ -376,5 +524,102 @@ function extractOutputSummary(step: RunStep): {
 
   return {
     previewText: typeof output === "object" ? `${Object.keys(output).length} keys output` : String(output),
+  };
+}
+
+function extractOutputItemSummary(
+  item: unknown,
+  index: number,
+  total: number,
+  stepType: string
+): {
+  label: string;
+  subLabel?: string;
+  previewText?: string;
+} {
+  const type = stepType.toLowerCase();
+
+  // If item is a string (e.g. transformed query string)
+  if (typeof item === "string") {
+    if (type.includes("transformation") || type.includes("query")) {
+      return {
+        label: `Query #${index + 1}`,
+        subLabel: `Query ${index + 1} of ${total}`,
+        previewText: item,
+      };
+    }
+    return {
+      label: `Item #${index + 1}`,
+      subLabel: `${index + 1} of ${total}`,
+      previewText: item,
+    };
+  }
+
+  // If item is an object (e.g. chunk/doc)
+  if (typeof item === "object" && item !== null) {
+    const doc = item as Record<string, any>;
+    const score = doc.rerank_score ?? doc.score ?? doc.relevance_score ?? doc.metadata?.score;
+    const scoreStr = typeof score === "number" ? `score: ${score.toFixed(3)}` : undefined;
+
+    if (type.includes("retrieval")) {
+      const docName =
+        doc.name ||
+        doc.title ||
+        doc.metadata?.document_name ||
+        (doc.id ? `Chunk ${String(doc.id).slice(0, 8)}` : `Chunk #${index + 1}`);
+      const snippet = doc.snippet || doc.content || doc.text || doc.page_content || "";
+      return {
+        label: docName,
+        subLabel: scoreStr ? `Retrieved #${index + 1} • ${scoreStr}` : `Retrieved Chunk #${index + 1}`,
+        previewText: snippet
+          ? typeof snippet === "string"
+            ? snippet.length > 120
+              ? snippet.slice(0, 120) + "..."
+              : snippet
+            : JSON.stringify(snippet)
+          : undefined,
+      };
+    }
+
+    if (type.includes("reranking")) {
+      const docName =
+        doc.name ||
+        doc.title ||
+        doc.metadata?.document_name ||
+        (doc.id ? `Chunk ${String(doc.id).slice(0, 8)}` : `Candidate #${index + 1}`);
+      const snippet = doc.snippet || doc.content || doc.text || doc.page_content || "";
+      return {
+        label: docName,
+        subLabel: scoreStr ? `Rank #${index + 1} • ${scoreStr}` : `Rank #${index + 1}`,
+        previewText: snippet
+          ? typeof snippet === "string"
+            ? snippet.length > 120
+              ? snippet.slice(0, 120) + "..."
+              : snippet
+            : JSON.stringify(snippet)
+          : undefined,
+      };
+    }
+
+    // Generic object
+    const label = doc.name || doc.title || doc.id || `Item #${index + 1}`;
+    const snippet =
+      doc.snippet || doc.content || doc.text || doc.summary || doc.message || JSON.stringify(doc);
+    return {
+      label: String(label),
+      subLabel: scoreStr || `${index + 1} of ${total}`,
+      previewText:
+        typeof snippet === "string"
+          ? snippet.length > 120
+            ? snippet.slice(0, 120) + "..."
+            : snippet
+          : JSON.stringify(snippet),
+    };
+  }
+
+  // Primitive number / boolean
+  return {
+    label: `Item #${index + 1}`,
+    previewText: String(item),
   };
 }

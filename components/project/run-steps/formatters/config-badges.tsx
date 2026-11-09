@@ -70,7 +70,7 @@ export function ConfigBadges({ config, className }: ConfigBadgesProps) {
         return (
           <div
             key={key}
-            className="flex items-center gap-1.5 px-2.5 py-1 bg-[#12121a] border border-[#2a2a3a] cyber-chamfer-sm text-[11px]"
+            className="flex items-center gap-1.5 px-2.5 py-1 bg-card border border-border cyber-chamfer-sm text-[11px]"
             title={`${label}: ${displayVal}`}
           >
             <SlidersHorizontal className="h-3 w-3 text-accent shrink-0" />

@@ -11,7 +11,7 @@ interface SSEMessagePayload {
 
 export default function SSENotifier() {
   const { messages, status, reconnect, disconnect } = useSSE<SSEMessagePayload>({
-    url: `${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'}/api/v1/sse/stream`,
+    url: `${(process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api/v1').replace(/\/+$/, '')}/sse/stream`,
     eventNames: ['ingestion_status', 'document_upload_status', 'notification'],
   });
 

@@ -20,6 +20,8 @@ import {
   Sparkles,
   Workflow,
   ListTree,
+  Maximize2,
+  Minimize2,
   XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -65,12 +67,14 @@ export function RunStepsDialog({
   const [runDetails, setRunDetails] = useState<RunDetails | null>(null);
   const [activeStepId, setActiveStepId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"flowchart" | "tabs">("flowchart");
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     if (!open || !messageId) {
       setRunDetails(null);
       setError(null);
       setActiveStepId(null);
+      setIsFullscreen(false);
       return;
     }
 
@@ -117,11 +121,33 @@ export function RunStepsDialog({
     }
   };
 
+  // Allow ESC to exit fullscreen mode before closing the dialog
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isFullscreen) {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsFullscreen(false);
+      }
+    };
+    if (isFullscreen) {
+      window.addEventListener("keydown", handleKeyDown, { capture: true });
+      return () => window.removeEventListener("keydown", handleKeyDown, { capture: true });
+    }
+  }, [isFullscreen]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[95vw] md:max-w-[92vw] lg:max-w-7xl w-full max-h-[92vh] h-[88vh] flex flex-col p-6 gap-4 font-mono">
-        <DialogHeader className="border-b border-[#2a2a3a] pb-3 bg-[#12121a]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <DialogContent
+        className={cn(
+          "flex flex-col p-4 sm:p-6 gap-3 sm:gap-4 font-mono transition-all duration-200",
+          isFullscreen
+            ? "fixed inset-0 !top-0 !left-0 !translate-x-0 !translate-y-0 !w-screen !h-screen !max-w-none !max-h-none sm:!max-w-none md:!max-w-none lg:!max-w-none !rounded-none !border-0"
+            : "sm:max-w-[95vw] md:max-w-[92vw] lg:max-w-7xl w-full max-h-[92vh] h-[88vh]"
+        )}
+      >
+        <DialogHeader className="border-b border-border pb-3 bg-card">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pr-8">
             <div>
               <DialogTitle className="text-base font-bold uppercase tracking-wider flex items-center gap-2 text-accent">
                 <Layers className="h-5 w-5 text-accent" />
@@ -132,32 +158,58 @@ export function RunStepsDialog({
               </DialogDescription>
             </div>
 
-            {/* View Mode Toggle Buttons */}
+            {/* View Mode Toggle & Fullscreen Controls */}
             {runDetails && runDetails.steps.length > 0 && (
-              <div className="flex items-center gap-1 p-1 bg-[#0a0a0f] border border-[#2a2a3a] cyber-chamfer-sm shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1 p-1 bg-background border border-border cyber-chamfer-sm shrink-0">
+                  <button
+                    onClick={() => setViewMode("flowchart")}
+                    className={cn(
+                      "px-3 py-1.5 text-xs flex items-center gap-1.5 font-bold uppercase transition-colors cyber-chamfer-sm",
+                      viewMode === "flowchart"
+                        ? "bg-accent text-accent-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                    )}
+                  >
+                    <Workflow className="h-3.5 w-3.5" />
+                    Flowchart View
+                  </button>
+                  <button
+                    onClick={() => setViewMode("tabs")}
+                    className={cn(
+                      "px-3 py-1.5 text-xs flex items-center gap-1.5 font-bold uppercase transition-colors cyber-chamfer-sm",
+                      viewMode === "tabs"
+                        ? "bg-accent text-accent-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                    )}
+                  >
+                    <ListTree className="h-3.5 w-3.5" />
+                    Tabbed Inspector
+                  </button>
+                </div>
+
                 <button
-                  onClick={() => setViewMode("flowchart")}
+                  onClick={() => setIsFullscreen((prev) => !prev)}
                   className={cn(
-                    "px-3 py-1.5 text-xs flex items-center gap-1.5 font-bold uppercase transition-colors cyber-chamfer-sm",
-                    viewMode === "flowchart"
-                      ? "bg-accent text-[#0a0a0f]"
-                      : "text-muted-foreground hover:text-foreground hover:bg-[#12121a]"
+                    "px-2.5 py-2 text-xs flex items-center gap-1.5 font-bold uppercase transition-colors cyber-chamfer-sm border border-border",
+                    isFullscreen
+                      ? "bg-accent text-accent-foreground border-accent"
+                      : "bg-background text-muted-foreground hover:text-foreground hover:bg-secondary"
                   )}
+                  title={isFullscreen ? "Exit Fullscreen" : "Toggle Fullscreen"}
+                  aria-label={isFullscreen ? "Exit Fullscreen" : "Toggle Fullscreen"}
                 >
-                  <Workflow className="h-3.5 w-3.5" />
-                  Flowchart View
-                </button>
-                <button
-                  onClick={() => setViewMode("tabs")}
-                  className={cn(
-                    "px-3 py-1.5 text-xs flex items-center gap-1.5 font-bold uppercase transition-colors cyber-chamfer-sm",
-                    viewMode === "tabs"
-                      ? "bg-accent text-[#0a0a0f]"
-                      : "text-muted-foreground hover:text-foreground hover:bg-[#12121a]"
+                  {isFullscreen ? (
+                    <>
+                      <Minimize2 className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Exit</span>
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Fullscreen</span>
+                    </>
                   )}
-                >
-                  <ListTree className="h-3.5 w-3.5" />
-                  Tabbed Inspector
                 </button>
               </div>
             )}
@@ -166,9 +218,9 @@ export function RunStepsDialog({
 
         {loading ? (
           <div className="space-y-4 py-4">
-            <Skeleton className="h-12 w-full bg-[#12121a]" />
-            <Skeleton className="h-36 w-full bg-[#12121a]" />
-            <Skeleton className="h-36 w-full bg-[#12121a]" />
+            <Skeleton className="h-12 w-full bg-secondary" />
+            <Skeleton className="h-36 w-full bg-secondary" />
+            <Skeleton className="h-36 w-full bg-secondary" />
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center p-8 text-center border border-destructive/40 bg-destructive/10 cyber-chamfer text-destructive">
@@ -182,7 +234,7 @@ export function RunStepsDialog({
         ) : (
           <div className="flex-1 min-h-0 overflow-hidden flex flex-col space-y-4 font-mono">
             {/* Run Overview Metadata */}
-            <div className="flex items-center justify-between p-3 cyber-chamfer-sm bg-[#12121a] border border-[#2a2a3a] text-xs">
+            <div className="flex items-center justify-between p-3 cyber-chamfer-sm bg-card border border-border text-xs">
               <div className="flex items-center gap-4 font-mono">
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground uppercase text-[10px]">RUN_ID:</span>
@@ -227,11 +279,13 @@ export function RunStepsDialog({
                 runDetails={runDetails}
                 activeStepId={activeStepId}
                 onSelectStepId={setActiveStepId}
+                isFullscreen={isFullscreen}
+                onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
               />
             ) : (
               <div className="flex-1 overflow-hidden flex flex-col space-y-3 font-mono">
                 {/* Step Tabs */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[#2a2a3a] shrink-0">
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-border shrink-0">
                   {runDetails.steps.map((step) => {
                     const Icon = STEP_ICONS[step.step_type] || Code2;
                     const title = STEP_TITLES[step.step_type] || step.step_type.replace(/_/g, " ");
@@ -244,7 +298,7 @@ export function RunStepsDialog({
                           "px-3 py-2 text-xs flex items-center gap-2 whitespace-nowrap border-b-2 transition-colors shrink-0",
                           isActive
                             ? "border-accent text-accent"
-                            : "border-transparent text-muted-foreground hover:text-foreground hover:border-[#2a2a3a]"
+                            : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
                         )}
                       >
                         <Icon className="h-4 w-4" />

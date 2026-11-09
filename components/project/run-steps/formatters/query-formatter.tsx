@@ -1,13 +1,15 @@
 "use client";
 
 import { MessageSquare, Sparkles, History, ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface QueryFormatterProps {
   data: any;
   variant: "input" | "output";
+  selectedItemIndex?: number;
 }
 
-export function QueryFormatter({ data, variant }: QueryFormatterProps) {
+export function QueryFormatter({ data, variant, selectedItemIndex }: QueryFormatterProps) {
   if (!data) {
     return <div className="text-[11px] text-muted-foreground italic font-mono">// No query data</div>;
   }
@@ -22,7 +24,7 @@ export function QueryFormatter({ data, variant }: QueryFormatterProps) {
 
     return (
       <div className="space-y-3 font-mono">
-        <div className="p-3 bg-[#12121a] border border-[#2a2a3a] cyber-chamfer-sm space-y-1.5">
+        <div className="p-3 bg-card border border-border cyber-chamfer-sm space-y-1.5">
           <div className="flex items-center justify-between text-[10px] text-muted-foreground uppercase">
             <span className="flex items-center gap-1.5 text-accent font-bold">
               <MessageSquare className="h-3.5 w-3.5" />
@@ -72,17 +74,32 @@ export function QueryFormatter({ data, variant }: QueryFormatterProps) {
         </span>
       </div>
       <div className="space-y-2">
-        {queries.map((q, idx) => (
-          <div
-            key={idx}
-            className="p-2.5 bg-[#12121a] border border-[#2a2a3a] cyber-chamfer-sm flex items-start gap-2.5 text-xs text-foreground hover:border-accent/40 transition-colors"
-          >
-            <span className="px-1.5 py-0.5 bg-[#1c1c2e] text-accent text-[10px] font-bold shrink-0">
-              #{idx + 1}
-            </span>
-            <span className="font-sans leading-relaxed select-text flex-1">{q}</span>
-          </div>
-        ))}
+        {queries.map((q, idx) => {
+          const isSelected = selectedItemIndex === idx;
+          return (
+            <div
+              key={idx}
+              className={cn(
+                "p-2.5 bg-card border cyber-chamfer-sm flex items-start gap-2.5 text-xs text-foreground transition-all",
+                isSelected
+                  ? "border-accent ring-1 ring-accent shadow-sm"
+                  : "border-border hover:border-accent/40"
+              )}
+            >
+              <span
+                className={cn(
+                  "px-1.5 py-0.5 text-[10px] font-bold shrink-0",
+                  isSelected
+                    ? "bg-accent text-accent-foreground"
+                    : "bg-secondary text-accent"
+                )}
+              >
+                #{idx + 1}
+              </span>
+              <span className="font-sans leading-relaxed select-text flex-1">{q}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

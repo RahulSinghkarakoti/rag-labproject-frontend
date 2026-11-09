@@ -263,6 +263,22 @@ function RuntimeInner({
                 },
               };
             }
+            if (event === "cancelled" || payload.type === "cancelled") {
+              completed = true;
+              const finalContent = String(payload.response ?? streamedContent);
+              streamedContent = finalContent;
+              yield {
+                content: [{ type: "text", text: finalContent }],
+                metadata: {
+                  custom: {
+                    output_message_id: payload.output_message_id,
+                    run_id: payload.run_id ?? runId,
+                    user_message_id: userMessageId,
+                  },
+                },
+              };
+              return;
+            }
           }
           if (done) break;
         }

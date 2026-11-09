@@ -7,9 +7,10 @@ import { cn } from "@/lib/utils";
 interface RetrievalFormatterProps {
   data: any;
   variant: "input" | "output";
+  selectedItemIndex?: number;
 }
 
-export function RetrievalFormatter({ data, variant }: RetrievalFormatterProps) {
+export function RetrievalFormatter({ data, variant, selectedItemIndex }: RetrievalFormatterProps) {
   const [expandedDocs, setExpandedDocs] = useState<Record<number, boolean>>({});
 
   if (!data) {
@@ -38,9 +39,9 @@ export function RetrievalFormatter({ data, variant }: RetrievalFormatterProps) {
           {queries.map((q, idx) => (
             <div
               key={idx}
-              className="p-2 bg-[#12121a] border border-[#2a2a3a] cyber-chamfer-sm text-xs font-sans text-foreground flex items-center gap-2"
+              className="p-2 bg-card border border-border cyber-chamfer-sm text-xs font-sans text-foreground flex items-center gap-2"
             >
-              <span className="px-1.5 py-0.5 bg-[#1c1c2e] text-accent text-[10px] font-mono font-bold">
+              <span className="px-1.5 py-0.5 bg-secondary text-accent text-[10px] font-mono font-bold">
                 Q{idx + 1}
               </span>
               <span className="select-text">{q}</span>
@@ -77,13 +78,14 @@ export function RetrievalFormatter({ data, variant }: RetrievalFormatterProps) {
       </div>
 
       {documents.length === 0 ? (
-        <div className="p-3 bg-[#12121a] border border-[#2a2a3a] text-[11px] text-muted-foreground">
+        <div className="p-3 bg-card border border-border text-[11px] text-muted-foreground">
           // No chunks matched the similarity criteria.
         </div>
       ) : (
         <div className="space-y-2">
           {documents.map((doc, idx) => {
-            const isExpanded = !!expandedDocs[idx];
+            const isSelected = selectedItemIndex === idx;
+            const isExpanded = isSelected || !!expandedDocs[idx];
             const content =
               typeof doc === "string"
                 ? doc
@@ -99,11 +101,16 @@ export function RetrievalFormatter({ data, variant }: RetrievalFormatterProps) {
             return (
               <div
                 key={idx}
-                className="bg-[#12121a] border border-[#2a2a3a] cyber-chamfer-sm overflow-hidden text-xs transition-colors hover:border-accent/30"
+                className={cn(
+                  "bg-card border cyber-chamfer-sm overflow-hidden text-xs transition-all",
+                  isSelected
+                    ? "border-accent ring-1 ring-accent shadow-sm"
+                    : "border-border hover:border-accent/30"
+                )}
               >
                 <div
                   onClick={() => toggleDoc(idx)}
-                  className="p-2.5 flex items-center justify-between cursor-pointer select-none bg-[#161622] border-b border-[#2a2a3a]/60 hover:bg-[#1c1c2e]"
+                  className="p-2.5 flex items-center justify-between cursor-pointer select-none bg-muted/40 border-b border-border/60 hover:bg-muted"
                 >
                   <div className="flex items-center gap-2 overflow-hidden">
                     <FileText className="h-3.5 w-3.5 text-accent shrink-0" />
