@@ -17,7 +17,7 @@ export const DataArtifactNode = memo(function DataArtifactNode({
   return (
     <div
       className={cn(
-        "w-[220px] p-2.5 bg-card border cyber-chamfer-sm transition-all duration-150 font-mono text-xs cursor-pointer select-none",
+        "w-55 p-2.5 bg-card border cyber-chamfer-sm transition-all duration-150 font-mono text-xs cursor-pointer select-none",
         isSelected
           ? "border-accent ring-1 ring-accent shadow-sm"
           : "border-border hover:border-accent hover:bg-secondary/40"
@@ -27,7 +27,7 @@ export const DataArtifactNode = memo(function DataArtifactNode({
         id="left"
         type="target"
         position={Position.Left}
-        className="!w-2.5 !h-2.5 !border-2 !border-background !rounded-none !bg-accent"
+        className="w-2.5! h-2.5! border-2! border-background! rounded-none! bg-accent!"
       />
       <Handle
         id="top"

@@ -14,6 +14,7 @@ import {
   XCircle,
   Ban,
   SlidersHorizontal,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StepProcessNodeData } from "../types";
@@ -41,6 +42,8 @@ export const StepProcessNode = memo(function StepProcessNode({
         "w-[260px] p-3.5 bg-card border cyber-chamfer-sm transition-all duration-150 font-mono text-xs cursor-pointer select-none",
         isSelected
           ? "border-accent ring-1 ring-accent shadow-sm"
+          : step.status === "running"
+          ? "border-yellow-400 ring-1 ring-yellow-400/50 shadow-md shadow-yellow-500/10 animate-pulse bg-yellow-500/5"
           : "border-border hover:border-accent/50 hover:bg-secondary/40"
       )}
     >
@@ -78,6 +81,7 @@ export const StepProcessNode = memo(function StepProcessNode({
               : "text-yellow-500"
           )}
         >
+          {step.status === "running" && <Loader2 className="h-3 w-3 animate-spin text-yellow-400" />}
           {step.status === "completed" && <CheckCircle2 className="h-3 w-3" />}
           {step.status === "failed" && <XCircle className="h-3 w-3" />}
           {step.status === "cancelled" && <Ban className="h-3 w-3" />}

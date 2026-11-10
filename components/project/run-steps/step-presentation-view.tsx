@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { RunStep } from "@/lib/thread-api";
 import { ConfigBadges } from "./formatters/config-badges";
+import { MemoryFormatter } from "./formatters/memory-formatter";
 import { QueryFormatter } from "./formatters/query-formatter";
 import { RetrievalFormatter } from "./formatters/retrieval-formatter";
 import { RerankingFormatter } from "./formatters/reranking-formatter";
@@ -69,6 +70,9 @@ export function StepPresentationView({
     const type = step.step_type.toLowerCase();
     const itemIdx = variant === "output" ? selectedItemIndex : undefined;
 
+    if (type.includes("memory")) {
+      return <MemoryFormatter data={data} variant={variant} />;
+    }
     if (type.includes("transformation") || type.includes("query")) {
       return <QueryFormatter data={data} variant={variant} selectedItemIndex={itemIdx} />;
     }

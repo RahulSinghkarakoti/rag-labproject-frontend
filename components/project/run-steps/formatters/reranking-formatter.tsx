@@ -116,7 +116,7 @@ export function RerankingFormatter({ data, variant, selectedItemIndex }: Reranki
                       #{idx + 1}
                     </span>
                     <FileText className="h-3.5 w-3.5 text-accent shrink-0" />
-                    <span className="font-bold text-foreground truncate max-w-[240px] sm:max-w-md">
+                    <span className="font-bold text-foreground truncate max-w-60 sm:max-w-md">
                       {docName}
                     </span>
                   </div>

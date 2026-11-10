@@ -38,7 +38,7 @@ export const retrievalConfigSchema = z
 export const rerankingConfigSchema = z
   .object({
     enabled: z.boolean().default(true),
-    model: z.string().min(1).max(200).default("BAAI/bge-reranker-base"),
+    model: z.string().min(1).max(200).default("cross-encoder/ms-marco-MiniLM-L-6-v2"),
     top_n: z.number().int().min(1).max(200).default(10),
     top_k: z.number().int().min(1).max(100).default(5),
     batch_size: z.number().int().min(1).max(256).default(16),

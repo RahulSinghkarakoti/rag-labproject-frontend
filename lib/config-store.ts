@@ -40,7 +40,7 @@ export const defaultThreadConfig: ThreadConfig = {
   },
   reranking: {
     enabled: true,
-    model: "BAAI/bge-reranker-base",
+    model: "cross-encoder/ms-marco-MiniLM-L-6-v2",
     top_n: 10,
     top_k: 5,
     batch_size: 16,

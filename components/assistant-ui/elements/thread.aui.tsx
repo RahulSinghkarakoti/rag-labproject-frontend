@@ -24,7 +24,7 @@ import { TooltipIconButton } from "@/components/assistant-ui/elements/tooltip-ic
 import { AssistantReplyLoader } from "@/components/ui/ascii-loader";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useThreadStore } from "@/lib/thread-store";
+import { useThreadStore, isUuid } from "@/lib/thread-store";
 import { cn } from "@/lib/utils";
 import {
   ActionBarMorePrimitive,
@@ -534,6 +534,26 @@ const AssistantMessage: FC = () => {
   } = useContext(ThreadComponentsContext);
   const groupBy = TaskGroupComponent ? taskAwareGroupBy : messageGroupBy;
 
+  const isInterrupted = useAuiState((s) => {
+    const custom = s.message.metadata.custom as Record<string, unknown> | undefined;
+    if (custom?.interrupted_by_user === true) return true;
+    const content = s.message.content;
+    if (Array.isArray(content)) {
+      return content.some(
+        (part) =>
+          part.type === "text" &&
+          (part.text.includes("[User interrupted this response]") ||
+            part.text.includes("[Generation stopped by user]"))
+      );
+    }
+    return false;
+  });
+
+  const contextWindow = useAuiState((s) => {
+    const custom = s.message.metadata.custom as Record<string, unknown> | undefined;
+    return custom?.context_window as Record<string, unknown> | undefined;
+  });
+
   const ACTION_BAR_PT = "pt-1.5";
   const ACTION_BAR_HEIGHT = `min-h-7.5 ${ACTION_BAR_PT}`;
 
@@ -606,13 +626,32 @@ const AssistantMessage: FC = () => {
                   </div>
                 );
               case "indicator":
-                return <AssistantReplyLoader label="PROCESSING_QUERY" />;
+                return <LiveAssistantReplyLoader />;
               default:
                 return null;
             }
           }}
         </MessagePrimitive.GroupedParts>
         <MessageError />
+        {isInterrupted && (
+          <div className="flex items-center gap-1.5 text-xs text-yellow-500/90 font-mono italic mt-2 pt-1 border-t border-border/40">
+            <SquareIcon className="size-3 text-yellow-500 fill-yellow-500" />
+            <span>[User interrupted this response]</span>
+          </div>
+        )}
+        {contextWindow && (Boolean(contextWindow.summarized) || contextWindow.warning === "near_limit") && (
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-mono mt-1.5 pt-1 border-t border-border/20 opacity-80">
+            {contextWindow.warning === "near_limit" ? (
+              <span className="text-yellow-500/90">
+                [CONTEXT_LIMIT_WARNING: High context window usage ({String(contextWindow.percentage)}% of model limit)]
+              </span>
+            ) : (
+              <span className="text-accent/80">
+                [CONTEXT_OPTIMIZED: Earlier history summarized to preserve context window]
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <div
@@ -626,23 +665,93 @@ const AssistantMessage: FC = () => {
   );
 };
 
+const STEP_LOADING_LABELS: Record<string, string> = {
+  query_transformation: "TRANSFORMING_QUERY",
+  transformation: "TRANSFORMING_QUERY",
+  retrieval: "RETRIEVING_KNOWLEDGE",
+  reranking: "RERANKING_CANDIDATES",
+  context: "ASSEMBLING_CONTEXT",
+  generation: "GENERATING_RESPONSE",
+};
+
+const LiveAssistantReplyLoader: FC = () => {
+  const activeLiveRunId = useThreadStore((state) => state.activeLiveRunId);
+  const runIdFromMeta = useAuiState((s) => {
+    const custom = s.message.metadata.custom as Record<string, unknown> | undefined;
+    return typeof custom?.run_id === "string" ? custom.run_id : null;
+  });
+  const runId = runIdFromMeta || activeLiveRunId;
+  const liveRun = useThreadStore((state) => (runId ? state.liveRuns[runId] : null));
+
+  let label = "PROCESSING_QUERY";
+  if (liveRun) {
+    const runningStep = liveRun.steps.find((s) => s.status === "running");
+    if (runningStep) {
+      label = STEP_LOADING_LABELS[runningStep.step_type] || runningStep.step_type.toUpperCase().replace(/\s+/g, "_");
+    } else if (liveRun.steps.length > 0) {
+      const lastStep = liveRun.steps[liveRun.steps.length - 1];
+      label = STEP_LOADING_LABELS[lastStep.step_type] || lastStep.step_type.toUpperCase().replace(/\s+/g, "_");
+    } else if (liveRun.status === "running") {
+      label = "INITIALIZING_PIPELINE";
+    }
+  }
+
+  return <AssistantReplyLoader label={label} />;
+};
+
 const AssistantActionBar: FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const setPendingMessageAction = useThreadStore((state) => state.setPendingMessageAction);
+  const activeLiveRunId = useThreadStore((state) => state.activeLiveRunId);
+
+  const rawMessageId = useAuiState((s) => s.message.id);
+
   const messageId = useAuiState((s) => {
-    const custom = s.message.metadata.custom;
-    return typeof custom?.output_message_id === "string"
-      ? custom.output_message_id
-      : s.message.id;
+    const custom = s.message.metadata.custom as Record<string, unknown> | undefined;
+    const outputId = typeof custom?.output_message_id === "string" ? custom.output_message_id : null;
+    const userMsgId = typeof custom?.user_message_id === "string" ? custom.user_message_id : null;
+    if (outputId && isUuid(outputId)) return outputId;
+    if (userMsgId && isUuid(userMsgId)) return userMsgId;
+    // Only fall back to message.id if not running, as in-flight message IDs are temporary client UUIDs
+    if (s.message.status?.type !== "running" && isUuid(s.message.id)) return s.message.id;
+    return null;
   });
+
+  const runIdFromMeta = useAuiState((s) => {
+    const custom = s.message.metadata.custom as Record<string, unknown> | undefined;
+    return typeof custom?.run_id === "string" ? custom.run_id : null;
+  });
+
+  const isRunning = useAuiState((s) => s.message.status?.type === "running");
+  const effectiveRunId = runIdFromMeta || (isRunning ? activeLiveRunId : null);
+
+  const liveRun = useThreadStore((state) => (effectiveRunId ? state.liveRuns[effectiveRunId] : null));
+  const activeStep = liveRun?.steps?.find((s) => s.status === "running")
+    ?? (liveRun?.steps && liveRun.steps.length > 0 ? liveRun.steps[liveRun.steps.length - 1] : null);
+  const activeStepLabel = activeStep
+    ? (STEP_LOADING_LABELS[activeStep.step_type] || activeStep.step_type.toUpperCase().replace(/\s+/g, "_"))
+    : "INITIALIZING_PIPELINE";
 
   return (
     <>
       <RunStepsDialog
         messageId={messageId}
+        runId={effectiveRunId}
+        isRunning={isRunning}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
       />
+      {isRunning && (
+        <button
+          type="button"
+          onClick={() => setDialogOpen(true)}
+          className="flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-mono font-bold uppercase cyber-chamfer-sm border border-accent/40 bg-accent/10 text-accent hover:bg-accent hover:text-accent-foreground transition-all duration-150 animate-pulse my-1"
+          title="Inspect live RAG pipeline trace"
+        >
+          <LayersIcon className="size-3 animate-spin" />
+          <span>[LIVE TRACE: {activeStepLabel}]</span>
+        </button>
+      )}
       <ActionBarPrimitive.Root
         hideWhenRunning
         autohide="not-last"
@@ -686,7 +795,7 @@ const AssistantActionBar: FC = () => {
       <ActionBarPrimitive.Reload asChild>
         <TooltipIconButton
           tooltip="Refresh"
-          onClick={() => setPendingMessageAction({ type: "retry", messageId })}
+          onClick={() => setPendingMessageAction({ type: "retry", messageId: messageId || rawMessageId })}
           className="hover:text-accent"
         >
           <RefreshCwIcon />

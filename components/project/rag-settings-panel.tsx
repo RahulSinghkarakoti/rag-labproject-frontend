@@ -192,8 +192,9 @@ function FieldLabel({ label, hint, info }: { label: string; hint?: string; info?
 }
 
 const RERANKER_MODELS = [
-  { value: "BAAI/bge-reranker-base", label: "BAAI/bge-reranker-base" },
-  { value: "BAAI/bge-reranker-large", label: "BAAI/bge-reranker-large" },
+  { value: "cross-encoder/ms-marco-MiniLM-L-6-v2", label: "cross-encoder/ms-marco-MiniLM-L-6-v2 (Fast / 22M params)" },
+  { value: "BAAI/bge-reranker-base", label: "BAAI/bge-reranker-base (Balanced / 278M params)" },
+  { value: "BAAI/bge-reranker-large", label: "BAAI/bge-reranker-large (High Accuracy / 560M params)" },
 ];
 
 function SelectField({

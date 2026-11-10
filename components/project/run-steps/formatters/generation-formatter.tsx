@@ -77,7 +77,7 @@ export function GenerationFormatter({ data, variant }: GenerationFormatterProps)
         </button>
       </div>
 
-      <div className="p-3.5 bg-card border border-border cyber-chamfer-sm text-xs font-sans text-foreground/95 leading-relaxed whitespace-pre-wrap select-text max-h-[360px] overflow-y-auto">
+      <div className="p-3.5 bg-card border border-border cyber-chamfer-sm text-xs font-sans text-foreground/95 leading-relaxed whitespace-pre-wrap select-text max-h-90 overflow-y-auto">
         {responseText}
       </div>
     </div>

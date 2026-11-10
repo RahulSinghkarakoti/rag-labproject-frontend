@@ -142,6 +142,8 @@ export const threadApi = {
   remove: (threadId: string) => api.delete(`/threads/${threadId}`),
   runSteps: (messageId: string) =>
     api.get<RunDetails>(`/messages/${messageId}/run-steps`),
+  runDetails: (runId: string) =>
+    api.get<RunDetails>(`/runs/${runId}`),
   cancelRun: (runId: string) =>
     api.post(`/runs/${runId}/cancel`),
 };

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getThreadConfig, threadApi, type Thread, type ThreadMessage, type RunDetails } from "@/lib/thread-api";
+import { getThreadConfig, threadApi, type Thread, type ThreadMessage, type RunDetails, type RunStep } from "@/lib/thread-api";
 import { defaultThreadConfig, useThreadConfigStore, type ThreadConfig } from "@/lib/config-store";
 import { threadConfigSchema } from "@/lib/schemas/thread-config";
 
@@ -14,9 +14,18 @@ type ThreadStore = {
   selectedThreadId: string | null;
   status: "idle" | "loading" | "saving" | "deleting" | "error";
   error: string | null;
+  liveRuns: Record<string, RunDetails>;
+  activeLiveRunId: string | null;
+  initLiveRun: (runId: string, threadId: string, inputMessageId?: string | null, clientMsgId?: string | null) => void;
+  updateLiveRunStep: (runId: string, step: RunStep) => void;
+  completeLiveRun: (runId: string, outputMessageId?: string | null, response?: string | null) => void;
+  cancelLiveRun: (runId: string, outputMessageId?: string | null) => void;
+  failLiveRun: (runId: string, error?: any) => void;
+  getLiveRun: (messageId?: string | null, runId?: string | null) => RunDetails | null;
   fetchThreads: (projectId: string) => Promise<void>;
   fetchMessages: (threadId: string) => Promise<void>;
   fetchRunSteps: (messageId: string) => Promise<RunDetails>;
+  fetchRunDetails: (runId: string) => Promise<RunDetails>;
   sendMessage: (threadId: string, content: string, signal?: AbortSignal) => Promise<Response>;
   editMessage: (threadId: string, messageId: string, content: string, signal?: AbortSignal) => Promise<Response>;
   retryMessage: (threadId: string, messageId: string, signal?: AbortSignal) => Promise<Response>;
@@ -64,6 +73,169 @@ export const useThreadStore = create<ThreadStore>((set, get) => ({
   latestPipelineVersions: {},
   refreshGenerations: {},
   pendingMessageAction: null,
+  liveRuns: {},
+  activeLiveRunId: null,
+
+  initLiveRun: (runId, threadId, inputMessageId, clientMsgId) =>
+    set((state) => {
+      const existing = state.liveRuns[runId];
+      const newRun: RunDetails = existing || {
+        id: runId,
+        thread_id: threadId,
+        input_message_id: inputMessageId ?? null,
+        output_message_id: null,
+        run_type: "chat",
+        status: "running",
+        started_at: new Date().toISOString(),
+        completed_at: null,
+        error: null,
+        steps: [],
+      };
+      return {
+        liveRuns: { ...state.liveRuns, [runId]: newRun },
+        activeLiveRunId: runId,
+      };
+    }),
+
+  updateLiveRunStep: (runId, step) =>
+    set((state) => {
+      const run = state.liveRuns[runId];
+      if (!run) {
+        const newRun: RunDetails = {
+          id: runId,
+          thread_id: "",
+          input_message_id: null,
+          output_message_id: null,
+          run_type: "chat",
+          status: "running",
+          started_at: step.started_at ?? new Date().toISOString(),
+          completed_at: null,
+          error: null,
+          steps: [step],
+        };
+        return {
+          liveRuns: { ...state.liveRuns, [runId]: newRun },
+          activeLiveRunId: runId,
+        };
+      }
+
+      const steps = [...run.steps];
+      const idx = steps.findIndex(
+        (s) => s.id === step.id || (s.sequence === step.sequence && s.step_type === step.step_type)
+      );
+      if (idx >= 0) {
+        steps[idx] = { ...steps[idx], ...step };
+      } else {
+        steps.push(step);
+      }
+      steps.sort((a, b) => a.sequence - b.sequence);
+
+      return {
+        liveRuns: {
+          ...state.liveRuns,
+          [runId]: {
+            ...run,
+            steps,
+          },
+        },
+      };
+    }),
+
+  completeLiveRun: (runId, outputMessageId) =>
+    set((state) => {
+      const run = state.liveRuns[runId];
+      if (!run) return state;
+
+      const steps = run.steps.map((s) =>
+        s.status === "running"
+          ? { ...s, status: "completed", completed_at: s.completed_at ?? new Date().toISOString() }
+          : s
+      );
+
+      return {
+        liveRuns: {
+          ...state.liveRuns,
+          [runId]: {
+            ...run,
+            status: "completed",
+            completed_at: new Date().toISOString(),
+            output_message_id: outputMessageId ?? run.output_message_id,
+            steps,
+          },
+        },
+        activeLiveRunId: state.activeLiveRunId === runId ? null : state.activeLiveRunId,
+      };
+    }),
+
+  cancelLiveRun: (runId, outputMessageId) =>
+    set((state) => {
+      const run = state.liveRuns[runId];
+      if (!run) return state;
+
+      const steps = run.steps.map((s) =>
+        s.status === "running"
+          ? { ...s, status: "cancelled", completed_at: s.completed_at ?? new Date().toISOString() }
+          : s
+      );
+
+      return {
+        liveRuns: {
+          ...state.liveRuns,
+          [runId]: {
+            ...run,
+            status: "cancelled",
+            completed_at: new Date().toISOString(),
+            output_message_id: outputMessageId ?? run.output_message_id,
+            steps,
+          },
+        },
+        activeLiveRunId: state.activeLiveRunId === runId ? null : state.activeLiveRunId,
+      };
+    }),
+
+  failLiveRun: (runId, error) =>
+    set((state) => {
+      const run = state.liveRuns[runId];
+      if (!run) return state;
+
+      return {
+        liveRuns: {
+          ...state.liveRuns,
+          [runId]: {
+            ...run,
+            status: "failed",
+            completed_at: new Date().toISOString(),
+            error: error ?? { message: "Run failed" },
+          },
+        },
+        activeLiveRunId: state.activeLiveRunId === runId ? null : state.activeLiveRunId,
+      };
+    }),
+
+  getLiveRun: (messageId, runId) => {
+    const { liveRuns, activeLiveRunId, messageIdMap } = get();
+    if (runId && liveRuns[runId]) {
+      return liveRuns[runId];
+    }
+    if (messageId) {
+      const match = Object.values(liveRuns).find(
+        (r) => r.input_message_id === messageId || r.output_message_id === messageId
+      );
+      if (match) return match;
+
+      const mappedId = messageIdMap[messageId];
+      if (mappedId) {
+        const mappedMatch = Object.values(liveRuns).find(
+          (r) => r.input_message_id === mappedId || r.output_message_id === mappedId
+        );
+        if (mappedMatch) return mappedMatch;
+      }
+    }
+    if (!messageId && !runId && activeLiveRunId && liveRuns[activeLiveRunId]) {
+      return liveRuns[activeLiveRunId];
+    }
+    return null;
+  },
 
   registerMessageIdMapping: (clientMsgId, backendMsgId) =>
     set((state) => ({
@@ -118,7 +290,19 @@ export const useThreadStore = create<ThreadStore>((set, get) => ({
     }
   },
 
-  fetchRunSteps: (messageId) => threadApi.runSteps(messageId),
+  fetchRunSteps: (messageId) => {
+    if (!isUuid(messageId)) {
+      return Promise.reject(new Error("Valid message UUID required to fetch execution steps."));
+    }
+    return threadApi.runSteps(messageId);
+  },
+
+  fetchRunDetails: (runId) => {
+    if (!isUuid(runId)) {
+      return Promise.reject(new Error("Valid run UUID required to fetch execution steps."));
+    }
+    return threadApi.runDetails(runId);
+  },
 
   sendMessage: (threadId, content, signal) =>
     threadApi.sendMessage(threadId, { content, signal }),

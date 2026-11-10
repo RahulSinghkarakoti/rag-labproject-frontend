@@ -31,7 +31,7 @@ export function RetrievalFormatter({ data, variant, selectedItemIndex }: Retriev
 
     return (
       <div className="space-y-2 font-mono">
-        <div className="text-[10px] text-muted-foreground uppercase flex items-center gap-1.5 text-accent font-bold">
+        <div className="text-[10px] text-muted-foreground uppercase flex items-center gap-1.5 font-bold">
           <Database className="h-3.5 w-3.5" />
           Execution Search Queries ({queries.length})
         </div>
@@ -114,7 +114,7 @@ export function RetrievalFormatter({ data, variant, selectedItemIndex }: Retriev
                 >
                   <div className="flex items-center gap-2 overflow-hidden">
                     <FileText className="h-3.5 w-3.5 text-accent shrink-0" />
-                    <span className="font-bold text-foreground truncate max-w-[280px] sm:max-w-md">
+                    <span className="font-bold text-foreground truncate max-w-70 sm:max-w-md">
                       {docName}
                     </span>
                   </div>

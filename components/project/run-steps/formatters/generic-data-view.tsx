@@ -72,7 +72,7 @@ export function GenericDataView({ data, selectedItemIndex }: GenericDataViewProp
             <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
               {key.replace(/_/g, " ")}:
             </span>
-            <div className="text-foreground select-text break-words">
+            <div className="text-foreground select-text wrap-break-word">
               {typeof val === "object" ? (
                 <pre className="text-[10px] overflow-x-auto text-accent/90">{JSON.stringify(val, null, 2)}</pre>
               ) : (

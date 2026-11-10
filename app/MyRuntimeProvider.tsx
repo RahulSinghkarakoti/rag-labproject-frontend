@@ -23,9 +23,26 @@ type MyRuntimeProviderProps = {
 
 function toThreadMessage(message: ThreadMessage): ThreadMessageLike {
   const content = message.content ?? "";
+  const isInterrupted =
+    message.status === "cancelled" ||
+    (message.metadata && (message.metadata as Record<string, unknown>).interrupted_by_user === true) ||
+    content.includes("[User interrupted this response]") ||
+    content.includes("[Generation stopped by user]");
 
   if (message.role === "assistant") {
-    return { id: message.id, role: "assistant", content };
+    return {
+      id: message.id,
+      role: "assistant",
+      content,
+      metadata: {
+        custom: {
+          output_message_id: message.id,
+          run_id: message.metadata?.run_id,
+          interrupted_by_user: isInterrupted,
+          context_window: (message.metadata as Record<string, unknown> | undefined)?.context_window,
+        },
+      },
+    };
   }
 
   if (message.role === "human") {
@@ -168,6 +185,7 @@ function RuntimeInner({
       let completed = false;
       let runId: unknown;
       let userMessageId: unknown;
+      let contextWindow: unknown = null;
 
       const consumeFrame = (frame: string) => {
         const lines = frame.split(/\r?\n/).filter((line) => !line.startsWith(":"));
@@ -188,6 +206,7 @@ function RuntimeInner({
         try {
           reader.cancel().catch(() => undefined);
           if (runId) {
+            useThreadStore.getState().cancelLiveRun(String(runId));
             void threadApi.cancelRun(String(runId)).catch(() => undefined);
           }
         } catch {
@@ -229,9 +248,42 @@ function RuntimeInner({
               if (clientUserMessageId && typeof userMessageId === "string") {
                 useThreadStore.getState().registerMessageIdMapping(clientUserMessageId, userMessageId);
               }
+              if (runId) {
+                useThreadStore.getState().initLiveRun(
+                  String(runId),
+                  threadId,
+                  typeof userMessageId === "string" ? userMessageId : null,
+                  clientUserMessageId
+                );
+              }
+              yield {
+                content: [{ type: "text", text: "" }],
+                metadata: {
+                  custom: { run_id: runId, user_message_id: userMessageId },
+                },
+              };
+              continue;
+            }
+            if (
+              event === "step_start" ||
+              event === "step_complete" ||
+              event === "step_failed" ||
+              event === "step_cancelled" ||
+              payload.type === "step_start" ||
+              payload.type === "step_complete" ||
+              payload.type === "step_failed" ||
+              payload.type === "step_cancelled"
+            ) {
+              const step = payload.step as any;
+              if (step && runId) {
+                useThreadStore.getState().updateLiveRunStep(String(runId), step);
+              }
               continue;
             }
             if (event === "error" || payload.type === "error") {
+              if (runId) {
+                useThreadStore.getState().failLiveRun(String(runId), payload.error);
+              }
               const error = payload.error;
               throw new Error(
                 typeof error === "object" && error !== null && "message" in error
@@ -239,17 +291,31 @@ function RuntimeInner({
                   : String(error ?? "Message request failed"),
               );
             }
+            if (event === "context_status" || payload.type === "context_status") {
+              contextWindow = payload;
+              continue;
+            }
             if (event === "token" || payload.type === "token") {
               streamedContent += String(payload.content ?? "");
               yield {
                 content: [{ type: "text", text: streamedContent }],
                 metadata: {
-                  custom: { run_id: runId, user_message_id: userMessageId },
+                  custom: { run_id: runId, user_message_id: userMessageId, context_window: contextWindow },
                 },
               };
             }
             if (event === "complete" || payload.type === "complete") {
               completed = true;
+              if (payload.context_window) {
+                contextWindow = payload.context_window;
+              }
+              if (runId) {
+                useThreadStore.getState().completeLiveRun(
+                  String(runId),
+                  typeof payload.output_message_id === "string" ? payload.output_message_id : null,
+                  typeof payload.response === "string" ? payload.response : streamedContent
+                );
+              }
               const finalContent = String(payload.response ?? streamedContent);
               streamedContent = finalContent;
               yield {
@@ -259,12 +325,19 @@ function RuntimeInner({
                     output_message_id: payload.output_message_id,
                     run_id: payload.run_id ?? runId,
                     user_message_id: userMessageId,
+                    context_window: contextWindow,
                   },
                 },
               };
             }
             if (event === "cancelled" || payload.type === "cancelled") {
               completed = true;
+              if (runId) {
+                useThreadStore.getState().cancelLiveRun(
+                  String(runId),
+                  typeof payload.output_message_id === "string" ? payload.output_message_id : null
+                );
+              }
               const finalContent = String(payload.response ?? streamedContent);
               streamedContent = finalContent;
               yield {
@@ -274,6 +347,8 @@ function RuntimeInner({
                     output_message_id: payload.output_message_id,
                     run_id: payload.run_id ?? runId,
                     user_message_id: userMessageId,
+                    interrupted_by_user: true,
+                    context_window: contextWindow,
                   },
                 },
               };
@@ -284,6 +359,22 @@ function RuntimeInner({
         }
       } catch (err: any) {
         if (err?.name === "AbortError" || abortSignal?.aborted) {
+          if (runId) {
+            useThreadStore.getState().cancelLiveRun(String(runId));
+          }
+          if (streamedContent || runId) {
+            yield {
+              content: [{ type: "text", text: streamedContent }],
+              metadata: {
+                custom: {
+                  run_id: runId,
+                  user_message_id: userMessageId,
+                  interrupted_by_user: true,
+                  context_window: contextWindow,
+                },
+              },
+            };
+          }
           return;
         }
         throw err;
@@ -293,7 +384,25 @@ function RuntimeInner({
         }
       }
 
-      if (abortSignal?.aborted) return;
+      if (abortSignal?.aborted) {
+        if (runId) {
+          useThreadStore.getState().cancelLiveRun(String(runId));
+        }
+        if (streamedContent || runId) {
+          yield {
+            content: [{ type: "text", text: streamedContent }],
+            metadata: {
+              custom: {
+                run_id: runId,
+                user_message_id: userMessageId,
+                interrupted_by_user: true,
+                context_window: contextWindow,
+              },
+            },
+          };
+        }
+        return;
+      }
 
       if (!completed) throw new Error("Message stream ended before completion");
     },

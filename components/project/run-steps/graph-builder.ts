@@ -12,6 +12,7 @@ export interface GraphThemeTokens {
 }
 
 const STEP_TITLES: Record<string, string> = {
+  memory: "Conversation Memory",
   query_transformation: "Query Transformation",
   transformation: "Query Transformation",
   retrieval: "Knowledge Retrieval",
@@ -24,13 +25,20 @@ export function getStepOutputItems(step: RunStep): unknown[] | null {
   const output = step.output;
   if (!output) return null;
 
+  const stepType = step.step_type.toLowerCase();
+
+  // Memory step output represents conversation context as a whole (turns + summary).
+  // It should not be exploded into multiple scattered artifact nodes.
+  if (stepType.includes("memory")) {
+    return null;
+  }
+
   // Direct array
   if (Array.isArray(output)) {
     return output;
   }
 
   // Object wrapping an array for known stages (excluding generation)
-  const stepType = step.step_type.toLowerCase();
   if (!stepType.includes("generation") && typeof output === "object" && output !== null) {
     const obj = output as Record<string, unknown>;
     if (Array.isArray(obj.transformed_queries)) return obj.transformed_queries;
@@ -420,6 +428,15 @@ function extractInputSummary(step: RunStep): {
 
   const type = step.step_type.toLowerCase();
 
+  if (type.includes("memory")) {
+    const threadId = input?.thread_id ? String(input.thread_id).slice(0, 8) : null;
+    const turns = input?.memory_turns ?? input?.limit;
+    return {
+      subLabel: turns ? `${turns} max turns requested` : "Context history query",
+      previewText: threadId ? `Thread ${threadId} • Load recent dialogue window` : "Load recent dialogue window & summary",
+    };
+  }
+
   if (type.includes("transformation") || type.includes("query")) {
     const q =
       typeof input === "string"
@@ -472,6 +489,45 @@ function extractOutputSummary(step: RunStep): {
   if (!output) return { previewText: "No output data recorded" };
 
   const type = step.step_type.toLowerCase();
+
+  if (type.includes("memory")) {
+    let turnCount = 0;
+    let isSummarized = false;
+    let summaryText: string | null = null;
+
+    if (Array.isArray(output)) {
+      // Legacy tuple array: [recent_turns, summary, is_summarized]
+      const turns = Array.isArray(output[0]) ? output[0] : [];
+      turnCount = turns.length;
+      summaryText = typeof output[1] === "string" ? output[1] : null;
+      isSummarized = Boolean(output[2]);
+    } else if (typeof output === "object" && output !== null) {
+      const obj = output as Record<string, any>;
+      turnCount =
+        typeof obj.turn_count === "number"
+          ? obj.turn_count
+          : Array.isArray(obj.recent_turns)
+          ? obj.recent_turns.length
+          : 0;
+      summaryText = typeof obj.summary === "string" ? obj.summary : null;
+      isSummarized = Boolean(obj.is_summarized);
+    }
+
+    const subLabel = isSummarized
+      ? `${turnCount} turns in window • Compacted`
+      : `${turnCount} prior turns loaded`;
+    const previewText = summaryText
+      ? `Summary: ${summaryText.slice(0, 100)}${summaryText.length > 100 ? "..." : ""}`
+      : turnCount > 0
+      ? `${turnCount} conversational turns in context window`
+      : "No prior dialogue in thread";
+
+    return {
+      badgeCount: turnCount,
+      subLabel,
+      previewText,
+    };
+  }
 
   if (type.includes("transformation") || type.includes("query")) {
     let count = 0;

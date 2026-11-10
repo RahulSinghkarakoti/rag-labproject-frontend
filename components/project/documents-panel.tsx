@@ -265,7 +265,7 @@ export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) 
               <UploadCloud className="size-5" />
             </div>
             <p className="text-xs font-bold uppercase tracking-wider text-foreground">NO DOCUMENTS INDEXED</p>
-            <p className="mt-1 text-[10px] text-muted-foreground max-w-[200px]">
+            <p className="mt-1 text-[10px] text-muted-foreground max-w-50">
               Upload PDF, MD, TXT, or source files.
             </p>
             <Button
