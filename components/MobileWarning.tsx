@@ -5,6 +5,7 @@ import { AlertTriangle } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -47,23 +48,24 @@ export default function MobileWarning() {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleContinue(); }}>
       <DialogContent showCloseButton={false} className="sm:max-w-md border-amber-500/30">
-        <DialogHeader className="flex flex-col items-center gap-2 text-center">
-          <div className="flex size-12 items-center justify-center rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 mb-1">
-            <AlertTriangle className="size-6" />
+        <DialogHeader className="pr-4 text-center items-center">
+          <div className="flex size-10 items-center justify-center rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 mb-1">
+            <AlertTriangle className="size-5" />
           </div>
-          <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
+          <DialogTitle className="text-base font-bold tracking-tight text-foreground justify-center">
             Mobile Screen Detected
           </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground pt-1">
-            This project is not built for mobile UI, so some pages may be broken.
+          <DialogDescription className="text-xs text-muted-foreground">
+            This project is not optimized for mobile devices. Some layouts or functions may be constrained.
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="mt-4 sm:justify-center">
+        <DialogFooter className="sm:justify-center">
           <Button
             onClick={handleContinue}
-            className="w-full bg-amber-500 text-black hover:bg-amber-400 border-amber-500 font-semibold uppercase tracking-wider"
+            size="sm"
+            className="w-full bg-amber-500 text-black hover:bg-amber-400 border-amber-500 font-bold uppercase tracking-wider"
           >
-            Continue
+            CONTINUE
           </Button>
         </DialogFooter>
       </DialogContent>

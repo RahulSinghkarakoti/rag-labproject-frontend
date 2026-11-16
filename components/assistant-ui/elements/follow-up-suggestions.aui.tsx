@@ -2,6 +2,7 @@
 
 import { AuiIf, useAuiState, ThreadPrimitive } from "@assistant-ui/react";
 import { useCallback, useEffect, useRef, useState, type FC } from "react";
+import { Sparkles } from "lucide-react";
 
 const FollowupSuggestionsRow: FC = () => {
   const suggestions = useAuiState((s) => s.thread.suggestions);
@@ -44,21 +45,25 @@ const FollowupSuggestionsRow: FC = () => {
     <div
       ref={scrollRef}
       onScroll={updateFades}
-      // overflow-x clips both axes; py-1/-my-1 gives focus rings vertical room without changing outer height.
-      className="aui-thread-followup-suggestions -my-1 w-full [scrollbar-width:none] overflow-x-auto py-1 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      className="aui-thread-followup-suggestions -my-1 w-full [scrollbar-width:none] overflow-x-auto py-1.5 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden font-mono"
       style={{ maskImage, WebkitMaskImage: maskImage }}
     >
-      <div className="mx-auto flex min-h-8 w-max items-center gap-2 px-0.5">
+      <div className="mx-auto flex min-h-8 w-max items-center gap-2 px-1">
+        <span className="text-[10px] uppercase font-bold text-accent tracking-wider flex items-center gap-1 shrink-0 select-none">
+          <Sparkles className="size-3 text-accent fill-accent/20" />
+          <span className="hidden sm:inline">SUGGESTED:</span>
+        </span>
         {suggestions.map((suggestion, idx) => (
           <ThreadPrimitive.Suggestion
             key={idx}
-            className="aui-thread-followup-suggestion border-foreground/10 hover:bg-foreground/[0.03] hover:border-foreground/25 rounded-md border px-2.5 py-1 text-sm whitespace-nowrap transition-colors ease-in motion-reduce:transition-none"
+            className="aui-thread-followup-suggestion cyber-chamfer-sm border border-[#2a2a3a] bg-[#12121a] hover:border-accent hover:bg-[#1a1a28] hover:text-accent px-2.5 py-1 text-xs whitespace-nowrap transition-none flex items-center gap-1.5 cursor-pointer text-foreground/90 font-mono shadow-none"
             prompt={suggestion.prompt}
             send
           >
-            {suggestion.title ?? suggestion.prompt}
+            <span className="text-accent font-bold text-xs select-none">&gt;</span>
+            <span>{suggestion.title ?? suggestion.prompt}</span>
             {suggestion.label && (
-              <span className="aui-thread-followup-suggestion-label text-muted-foreground ms-1">
+              <span className="aui-thread-followup-suggestion-label text-muted-foreground ms-1 text-[10px]">
                 {suggestion.label}
               </span>
             )}

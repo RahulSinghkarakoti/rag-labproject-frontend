@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import { Slot } from "radix-ui"
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 font-mono uppercase text-xs tracking-wider font-semibold whitespace-nowrap border cyber-chamfer-sm outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 active:translate-y-[1px]",
+  "inline-flex shrink-0 items-center justify-center gap-2 font-mono uppercase text-xs tracking-wider font-semibold whitespace-nowrap border cyber-chamfer-sm outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg]:text-current hover:[&_svg]:text-current active:translate-y-[1px]",
   {
     variants: {
       variant: {
@@ -15,7 +15,7 @@ const buttonVariants = cva(
         outline:
           "bg-transparent border-accent text-accent hover:bg-accent hover:text-accent-foreground",
         secondary:
-          "bg-[#1c1c2e] border-[#2a2a3a] text-foreground hover:border-accent hover:text-accent",
+          "bg-[#1c1c2e] border-[#2a2a3a] text-foreground hover:border-accent hover:text-accent hover:bg-[#252538]",
         ghost:
           "border-transparent bg-transparent text-foreground hover:bg-[#1c1c2e] hover:text-accent",
         link: "border-transparent text-accent underline-offset-4 hover:underline",

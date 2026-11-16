@@ -8,6 +8,7 @@ import type {
   LLMProvider,
   RetrievalStrategy,
   ThreadConfig,
+  ChatMode,
 } from "@/lib/schemas/thread-config";
 
 export type {
@@ -19,6 +20,7 @@ export type {
   LLMProvider,
   RetrievalStrategy,
   ThreadConfig,
+  ChatMode,
 };
 
 export const defaultThreadConfig: ThreadConfig = {
@@ -42,7 +44,7 @@ export const defaultThreadConfig: ThreadConfig = {
     enabled: true,
     model: "cross-encoder/ms-marco-MiniLM-L-6-v2",
     top_n: 10,
-    top_k: 5,
+    top_k: 10,
     batch_size: 16,
     score_threshold: null,
     return_documents: true,
@@ -53,6 +55,9 @@ export const defaultThreadConfig: ThreadConfig = {
     temperature: 0.2,
     max_tokens: 1000,
     citation_enforced: false,
+    chat_mode: "conversational",
+    suggest_followups: true,
+    system_prompt: null,
   },
 };
 

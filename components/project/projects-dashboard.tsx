@@ -11,6 +11,7 @@ import { Footer } from "@/components/footer";
 import { ThemeAccentSelector } from "@/components/theme-accent-selector";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -146,38 +147,45 @@ export function ProjectsDashboard() {
                     {editProjectId ? "UPDATE" : "NEW"} PROJECT
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle className="uppercase tracking-wider text-accent text-base">
+                    <DialogTitle className="text-accent">
                       &gt; {editProjectId ? "UPDATE_NODE" : "NEW_PROJECT_NODE"}
                     </DialogTitle>
-                    <DialogDescription className="text-xs text-muted-foreground">
+                    <DialogDescription>
                       Specify workspace designation and metadata parameters.
                     </DialogDescription>
                   </DialogHeader>
-                  <form id="new-project" onSubmit={addProject} className="grid gap-4 py-2">
-                    <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Project Name
-                      <Input
-                        autoFocus
-                        required
-                        value={name}
-                        onChange={(event) => setName(event.target.value)}
-                        placeholder="e.g. CORE_ENG_DOCS"
-                      />
-                    </label>
-                    <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Description
-                      <Textarea
-                        value={description}
-                        onChange={(event) => setDescription(event.target.value)}
-                        placeholder="Node usage parameters..."
-                        rows={3}
-                      />
-                    </label>
+                  <form id="new-project" onSubmit={addProject} className="contents">
+                    <DialogBody className="space-y-3">
+                      <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Project Name
+                        <Input
+                          autoFocus
+                          required
+                          value={name}
+                          onChange={(event) => setName(event.target.value)}
+                          placeholder="e.g. CORE_ENG_DOCS"
+                          className="h-8 text-xs"
+                        />
+                      </label>
+                      <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Description
+                        <Textarea
+                          value={description}
+                          onChange={(event) => setDescription(event.target.value)}
+                          placeholder="Node usage parameters..."
+                          rows={3}
+                          className="text-xs"
+                        />
+                      </label>
+                    </DialogBody>
                   </form>
                   <DialogFooter>
-                    <Button type="submit" form="new-project">
+                    <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
+                      CANCEL
+                    </Button>
+                    <Button type="submit" form="new-project" size="sm">
                       {editProjectId ? "EXECUTE_UPDATE" : "INITIALIZE_NODE"}
                     </Button>
                   </DialogFooter>
@@ -186,17 +194,20 @@ export function ProjectsDashboard() {
             </div>
 
             <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-              <DialogContent>
+              <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle className="text-destructive uppercase tracking-wider">
+                  <DialogTitle className="text-destructive">
                     &gt; TERMINATE_NODE?
                   </DialogTitle>
-                  <DialogDescription className="text-xs text-muted-foreground">
+                  <DialogDescription>
                     Warning: Data destruction is permanent and unrecoverable.
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
-                  <Button variant="destructive" onClick={handleDeleteProject}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setDeleteOpen(false)}>
+                    CANCEL
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={handleDeleteProject}>
                     CONFIRM_TERMINATE
                   </Button>
                 </DialogFooter>

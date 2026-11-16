@@ -119,7 +119,7 @@ export default function RootLayout({
       </head>
       <body className="scanlines font-mono bg-background text-foreground antialiased selection:bg-accent selection:text-[#0a0a0f]">
         <div className="flex h-svh w-full flex-col overflow-hidden">
-          <SessionProvider>
+          <SessionProvider refetchInterval={4 * 60} refetchOnWindowFocus={true}>
             <ThemeAccentProvider>
               <MobileWarning />
               <main className="flex-1 min-h-0 overflow-y-auto">{children}</main>

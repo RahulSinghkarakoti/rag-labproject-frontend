@@ -25,6 +25,7 @@ import { AssistantReplyLoader } from "@/components/ui/ascii-loader";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useThreadStore, isUuid } from "@/lib/thread-store";
+import { useThreadConfigStore } from "@/lib/config-store";
 import { cn } from "@/lib/utils";
 import {
   ActionBarMorePrimitive,
@@ -428,6 +429,63 @@ const Composer: FC<{ autoFocus: boolean }> = ({ autoFocus }) => {
   );
 };
 
+const ChatModeToggle: FC = () => {
+  const selectedThreadId = useThreadStore((state) => state.selectedThreadId);
+  const saveThreadConfig = useThreadStore((state) => state.saveThreadConfig);
+  const getConfig = useThreadConfigStore((state) => state.getConfig);
+  const updateSection = useThreadConfigStore((state) => state.updateSection);
+  const storedConfig = useThreadConfigStore((state) =>
+    selectedThreadId ? state.configs[selectedThreadId] : undefined
+  );
+
+  if (!selectedThreadId) return <div />;
+
+  const activeConfig = storedConfig ?? getConfig(selectedThreadId);
+  const chatMode = activeConfig.generation?.chat_mode ?? "conversational";
+  const isConversational = chatMode === "conversational";
+
+  const handleToggle = () => {
+    const nextMode: "conversational" | "strict" = isConversational ? "strict" : "conversational";
+    updateSection(selectedThreadId, "generation", { chat_mode: nextMode });
+    const baseConfig = getConfig(selectedThreadId);
+    const nextConfig = {
+      ...baseConfig,
+      generation: {
+        ...baseConfig.generation,
+        chat_mode: nextMode,
+      },
+    };
+    void saveThreadConfig(selectedThreadId, nextConfig);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleToggle}
+      className={cn(
+        "group flex items-center gap-1.5 px-2 py-1 text-[10px] font-mono tracking-wider border cyber-chamfer-xs transition-none cursor-pointer select-none",
+        isConversational
+          ? "border-accent/40 bg-accent/10 text-accent hover:bg-accent/20 hover:border-accent"
+          : "border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:border-amber-400"
+      )}
+      title={
+        isConversational
+          ? "Mode: Conversational (synthesizes answers with context). Click to switch to Strict Q&A."
+          : "Mode: Strict Q&A (strictly answers only from retrieved sources, rejects outside knowledge). Click to switch to Conversational."
+      }
+    >
+      <span
+        className={cn(
+          "inline-block size-1.5 rounded-full animate-pulse",
+          isConversational ? "bg-accent" : "bg-amber-400"
+        )}
+      />
+      <span className="text-muted-foreground group-hover:text-foreground">MODE:</span>
+      <span className="font-bold">{isConversational ? "CONVERSATIONAL" : "STRICT"}</span>
+    </button>
+  );
+};
+
 const ComposerAction: FC = () => {
   const isSending = useAuiState(
     (s) =>
@@ -436,7 +494,8 @@ const ComposerAction: FC = () => {
   );
 
   return (
-    <div className="aui-composer-action-wrapper relative flex items-center justify-end border-t border-[#2a2a3a] pt-2">
+    <div className="aui-composer-action-wrapper relative flex items-center justify-between border-t border-[#2a2a3a] pt-2">
+      <ChatModeToggle />
       <div className="flex items-center gap-1.5">
         <AuiIf condition={(s) => s.thread.capabilities.dictation}>
           <AuiIf condition={(s) => s.composer.dictation == null}>
@@ -745,7 +804,7 @@ const AssistantActionBar: FC = () => {
         <button
           type="button"
           onClick={() => setDialogOpen(true)}
-          className="flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-mono font-bold uppercase cyber-chamfer-sm border border-accent/40 bg-accent/10 text-accent hover:bg-accent hover:text-accent-foreground transition-all duration-150 animate-pulse my-1"
+          className="flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-mono font-bold uppercase cyber-chamfer-sm border border-accent/40 bg-accent/10 text-accent hover:bg-accent hover:text-accent-foreground transition-all duration-150 animate-pulse my-1 [&_svg]:text-current hover:[&_svg]:text-current"
           title="Inspect live RAG pipeline trace"
         >
           <LayersIcon className="size-3 animate-spin" />
@@ -817,7 +876,7 @@ const AssistantActionBar: FC = () => {
           className="aui-action-bar-more-content bg-[#12121a] text-foreground font-mono cyber-chamfer-sm z-50 min-w-[8rem] overflow-hidden border border-[#2a2a3a] p-1.5"
         >
           <ActionBarPrimitive.ExportMarkdown asChild>
-            <ActionBarMorePrimitive.Item className="aui-action-bar-more-item hover:bg-accent hover:text-[#0a0a0f] flex cursor-pointer items-center gap-2 px-2.5 py-1.5 text-xs font-bold uppercase outline-none select-none">
+            <ActionBarMorePrimitive.Item className="aui-action-bar-more-item hover:bg-accent hover:text-[#0a0a0f] [&_svg]:text-current hover:[&_svg]:text-current flex cursor-pointer items-center gap-2 px-2.5 py-1.5 text-xs font-bold uppercase outline-none select-none">
               <DownloadIcon className="size-4" />
               EXPORT_MD
             </ActionBarMorePrimitive.Item>

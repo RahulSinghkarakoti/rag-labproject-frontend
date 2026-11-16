@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -44,12 +45,12 @@ export function KbDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg border border-border bg-card p-6 text-foreground font-mono shadow-2xl cyber-chamfer">
-        <DialogHeader className="border-b border-border pb-4 pr-10">
+      <DialogContent className="max-w-lg sm:max-w-lg">
+        <DialogHeader>
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2">
-              <Database className="h-5 w-5 text-accent shrink-0" />
-              <DialogTitle className="text-sm font-bold uppercase tracking-wider text-accent truncate">
+              <Database className="h-4 w-4 text-accent shrink-0" />
+              <DialogTitle className="text-accent truncate">
                 &gt; KB_SPECIFICATION: {kb.name}
               </DialogTitle>
             </div>
@@ -61,8 +62,8 @@ export function KbDetailsDialog({
             <div className="mt-1">
               <DialogDescription
                 className={cn(
-                  "text-xs text-muted-foreground font-mono leading-relaxed transition-all",
-                  !isDescExpanded && isLongDesc && "line-clamp-2"
+                  "line-clamp-2",
+                  isDescExpanded && "line-clamp-none"
                 )}
               >
                 {kb.description}
@@ -78,20 +79,20 @@ export function KbDetailsDialog({
               )}
             </div>
           ) : (
-            <DialogDescription className="text-[11px] text-muted-foreground uppercase font-mono mt-1">
+            <DialogDescription className="mt-1">
               Knowledge base ingestion chunking and embedding configuration.
             </DialogDescription>
           )}
         </DialogHeader>
 
-        <div className="space-y-4 py-2 text-xs max-h-[60vh] overflow-y-auto pr-1">
+        <DialogBody className="space-y-3">
           {/* Chunking Specification */}
-          <div className="cyber-chamfer-sm border border-border bg-secondary/30 p-3 space-y-2">
+          <div className="cyber-chamfer-sm border border-border bg-secondary/30 p-2.5 space-y-2">
             <div className="flex items-center gap-2 text-[11px] font-bold text-accent uppercase">
               <Scissors className="h-3.5 w-3.5" />
               <span>&gt; CHUNKING_PIPELINE</span>
             </div>
-            <div className="grid grid-cols-3 gap-2 pt-1 border-t border-border/60 text-[10px]">
+            <div className="grid grid-cols-3 gap-2 pt-1.5 border-t border-border/60 text-[10px]">
               <div>
                 <span className="text-muted-foreground uppercase">STRATEGY:</span>
                 <p className="font-bold text-foreground uppercase mt-0.5">{chunkStrategy}</p>
@@ -108,19 +109,19 @@ export function KbDetailsDialog({
           </div>
 
           {/* Embedding Specification */}
-          <div className="cyber-chamfer-sm border border-border bg-secondary/30 p-3 space-y-2">
+          <div className="cyber-chamfer-sm border border-border bg-secondary/30 p-2.5 space-y-2">
             <div className="flex items-center gap-2 text-[11px] font-bold text-accent uppercase">
               <Binary className="h-3.5 w-3.5" />
               <span>&gt; EMBEDDING_SPECIFICATION</span>
             </div>
-            <div className="pt-1 border-t border-border/60 text-[10px]">
+            <div className="pt-1.5 border-t border-border/60 text-[10px]">
               <span className="text-muted-foreground uppercase">EMBEDDING_MODEL:</span>
               <p className="font-bold text-foreground mt-0.5 break-all">{embedModel}</p>
             </div>
           </div>
 
           {/* Documents */}
-          <div className="cyber-chamfer-sm border border-border bg-secondary/30 p-3 space-y-2">
+          <div className="cyber-chamfer-sm border border-border bg-secondary/30 p-2.5 space-y-2">
             <div className="flex items-center justify-between text-[11px] font-bold text-accent uppercase">
               <div className="flex items-center gap-2">
                 <FileText className="h-3.5 w-3.5" />
@@ -128,7 +129,7 @@ export function KbDetailsDialog({
               </div>
             </div>
             {documents.length > 0 ? (
-              <div className="max-h-40 overflow-y-auto space-y-1.5 pt-1 border-t border-border/60">
+              <div className="max-h-36 overflow-y-auto space-y-1.5 pt-1.5 border-t border-border/60">
                 {documents.map((doc) => (
                   <div
                     key={doc.id}
@@ -153,12 +154,12 @@ export function KbDetailsDialog({
                 ))}
               </div>
             ) : (
-              <p className="text-[10px] uppercase text-muted-foreground pt-1 border-t border-border/60">
+              <p className="text-[10px] uppercase text-muted-foreground pt-1.5 border-t border-border/60">
                 NO_DOCUMENTS_UPLOADED
               </p>
             )}
           </div>
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

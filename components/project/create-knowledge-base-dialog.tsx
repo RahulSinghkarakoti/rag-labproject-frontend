@@ -8,6 +8,7 @@ import { Database, Layers, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -60,27 +61,27 @@ export function CreateKnowledgeBaseDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl sm:max-w-2xl overflow-hidden p-0 font-mono bg-card border-border">
-        <DialogHeader className="border-b border-border px-6 py-4 bg-card shrink-0">
+      <DialogContent className="max-w-xl sm:max-w-xl">
+        <DialogHeader className="pb-0">
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center cyber-chamfer-sm bg-accent text-accent-foreground">
-              <Database className="size-4" />
+            <div className="flex size-7 items-center justify-center cyber-chamfer-sm bg-accent text-accent-foreground shrink-0">
+              <Database className="size-3.5" />
             </div>
             <div>
-              <DialogTitle className="text-base font-bold uppercase tracking-wider text-foreground">
+              <DialogTitle>
                 &gt; CREATE_KNOWLEDGE_BASE
               </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground uppercase">
+              <DialogDescription>
                 Configure document parsing, chunking strategy &amp; vector embedding pipeline.
               </DialogDescription>
             </div>
           </div>
 
-          <div className="mt-3 flex border-b border-border -mb-4 text-xs font-bold uppercase">
+          <div className="mt-3 flex border-b border-border text-xs font-bold uppercase">
             <button
               type="button"
               onClick={() => setActiveTab("general")}
-              className={`flex items-center gap-1.5 border-b-2 px-3 py-2 transition-none ${
+              className={`flex items-center gap-1.5 border-b-2 px-3 py-1.5 transition-none cursor-pointer ${
                 activeTab === "general"
                   ? "border-accent text-accent"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -91,21 +92,21 @@ export function CreateKnowledgeBaseDialog({
             <button
               type="button"
               onClick={() => setActiveTab("chunking")}
-              className={`flex items-center gap-1.5 border-b-2 px-3 py-2 transition-none ${
+              className={`flex items-center gap-1.5 border-b-2 px-3 py-1.5 transition-none cursor-pointer ${
                 activeTab === "chunking"
                   ? "border-accent text-accent"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               <Layers className="size-3.5" /> [2] CHUNKING &amp; EMBEDDING
-            </button> 
+            </button>
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col max-h-[82vh] overflow-hidden bg-card">
-          <div className="space-y-4 px-6 py-4 overflow-y-auto max-h-[58vh]">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+          <DialogBody className="space-y-4">
             {activeTab === "general" && (
-              <div className="space-y-4 font-mono">
+              <div className="space-y-4">
                 <div>
                   <label className="text-xs font-bold uppercase tracking-wider text-foreground">
                     Knowledge Base Designation <span className="text-destructive">*</span>
@@ -113,7 +114,7 @@ export function CreateKnowledgeBaseDialog({
                   <Input
                     {...register("name")}
                     placeholder="e.g. LEGAL_CONTRACTS_NODE"
-                    className="mt-1.5 h-9"
+                    className="mt-1.5 h-8 text-xs"
                   />
                   {errors.name && (
                     <p className="mt-1 text-xs text-destructive">{errors.name.message}</p>
@@ -135,11 +136,11 @@ export function CreateKnowledgeBaseDialog({
                   )}
                 </div>
 
-                <div className="cyber-chamfer-sm border border-border bg-secondary/30 p-3 text-xs text-muted-foreground space-y-1 font-mono">
-                  <p className="font-bold text-accent uppercase flex items-center gap-1.5">
+                <div className="cyber-chamfer-sm border border-border bg-secondary/30 p-2.5 text-xs text-muted-foreground space-y-1">
+                  <p className="font-bold text-accent uppercase flex items-center gap-1.5 text-[11px]">
                     <Sparkles className="size-3.5 text-accent" /> // MULTI_KB_PIPELINE
                   </p>
-                  <p className="text-[11px]">
+                  <p className="text-[11px] leading-relaxed">
                     Multiple knowledge bases allow isolated chunking parameters and comparative vector search within a single project node.
                   </p>
                 </div>
@@ -147,14 +148,14 @@ export function CreateKnowledgeBaseDialog({
             )}
 
             {activeTab === "chunking" && (
-              <div className="space-y-4 font-mono">
+              <div className="space-y-4">
                 <div>
                   <label className="text-xs font-bold uppercase tracking-wider text-foreground">
                     Chunking Strategy
                   </label>
                   <select
                     {...register("chunking_config.strategy")}
-                    className="mt-1.5 h-9 w-full bg-background border border-border cyber-chamfer-sm px-3 text-xs font-mono text-foreground outline-none focus:border-accent"
+                    className="mt-1.5 h-8 w-full bg-background border border-border cyber-chamfer-sm px-2.5 text-xs font-mono text-foreground outline-none focus:border-accent"
                   >
                     <option value="recursive">Recursive Character (Recommended)</option>
                     <option value="markdown">Markdown Header Splitter</option>
@@ -168,7 +169,7 @@ export function CreateKnowledgeBaseDialog({
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-bold uppercase tracking-wider text-foreground">
                       Chunk Size (chars)
@@ -176,7 +177,7 @@ export function CreateKnowledgeBaseDialog({
                     <Input
                       type="number"
                       {...register("chunking_config.chunk_size")}
-                      className="mt-1.5 h-9 text-xs"
+                      className="mt-1.5 h-8 text-xs"
                     />
                     {errors.chunking_config?.chunk_size && (
                       <p className="mt-1 text-xs text-destructive">
@@ -192,7 +193,7 @@ export function CreateKnowledgeBaseDialog({
                     <Input
                       type="number"
                       {...register("chunking_config.chunk_overlap")}
-                      className="mt-1.5 h-9 text-xs"
+                      className="mt-1.5 h-8 text-xs"
                     />
                     {errors.chunking_config?.chunk_overlap && (
                       <p className="mt-1 text-xs text-destructive">
@@ -202,14 +203,14 @@ export function CreateKnowledgeBaseDialog({
                   </div>
                 </div>
 
-                <div className="border-t border-border pt-4">
+                <div className="border-t border-border pt-3">
                   <label className="text-xs font-bold uppercase tracking-wider text-foreground">
                     Vector Embedding Model
                   </label>
                   <select
                     {...register("embedding_config.model")}
-                    className="mt-1.5 h-9 w-full bg-background border border-border cyber-chamfer-sm px-3 text-xs font-mono text-foreground outline-none focus:border-accent"
-                  > 
+                    className="mt-1.5 h-8 w-full bg-background border border-border cyber-chamfer-sm px-2.5 text-xs font-mono text-foreground outline-none focus:border-accent"
+                  >
                     <option value="BAAI/bge-large-en-v1.5">BAAI bge-large-en-v1.5 (1024d)</option>
                     <option value="all-MiniLM-L6-v2">all-MiniLM-L6-v2 (384d)</option>
                   </select>
@@ -221,9 +222,9 @@ export function CreateKnowledgeBaseDialog({
                 </div>
               </div>
             )}
-          </div>
+          </DialogBody>
 
-          <DialogFooter className="border-t border-border px-6 py-3 bg-card shrink-0">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"

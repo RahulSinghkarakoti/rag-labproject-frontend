@@ -12,6 +12,7 @@ const FRIENDLY_LABELS: Record<string, string> = {
   mode: "Transformation Mode",
   query_count: "Query Count",
   include_original: "Include Original",
+  prompt_template: "Prompt Template",
   strategy: "Retrieval Strategy",
   alpha: "Hybrid Alpha",
   top_k: "Top K",
@@ -25,11 +26,15 @@ const FRIENDLY_LABELS: Record<string, string> = {
   top_n: "Top N Candidates",
   batch_size: "Batch Size",
   score_threshold: "Score Threshold",
+  return_documents: "Return Documents",
   provider: "LLM Provider",
   llm_model: "Model Name",
   temperature: "Temperature",
   max_tokens: "Max Tokens",
   citation_enforced: "Citation Enforced",
+  chat_mode: "Chat Mode",
+  suggest_followups: "Suggest Followups",
+  system_prompt: "System Persona",
 };
 
 export function ConfigBadges({ config, className }: ConfigBadgesProps) {

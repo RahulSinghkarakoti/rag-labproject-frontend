@@ -56,11 +56,14 @@ export function getStepOutputItems(step: RunStep): unknown[] | null {
 export function buildPipelineGraph(
   runDetails: RunDetails,
   selectedTarget: SelectedNodeTarget | null,
-  layoutMode: FlowchartLayoutMode = "horizontal",
-  themeTokens?: GraphThemeTokens
+  layoutModeOrTokens?: FlowchartLayoutMode | GraphThemeTokens,
+  maybeTokens?: GraphThemeTokens
 ): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
+
+  const themeTokens: GraphThemeTokens | undefined =
+    typeof layoutModeOrTokens === "object" ? layoutModeOrTokens : maybeTokens;
 
   const strokeNormal = themeTokens?.border || "var(--border)";
   const strokeActive = themeTokens?.accent || "var(--accent)";
@@ -70,23 +73,16 @@ export function buildPipelineGraph(
   if (steps.length === 0) return { nodes, edges };
 
   // Explicit dimensions for React Flow node boundary calculations
-  const INPUT_WIDTH = 210;
-  const STEP_WIDTH = 250;
-  const OUTPUT_WIDTH = 210;
+  // Single flat conveyor line constants
+  const INPUT_WIDTH = 195;
+  const STEP_WIDTH = 260;
+  const OUTPUT_WIDTH = 195;
   const ESTIMATED_HEIGHT = 120;
-  const ITEM_GAP_Y = 16;
+  const ITEM_GAP_Y = 14;
 
-  // Staged Rows mode constants:
-  const ROW_START_X = 40;
-  const ROW_START_Y = 40;
-  const ROW_INTERNAL_GAP = 40;
-  const STAGE_ROW_GAP = 50;
-  let currentStageY = ROW_START_Y;
-
-  // Horizontal conveyor mode constants:
-  const HORIZ_INTERNAL_GAP = 40;
-  const HORIZ_STAGE_GAP = 80;
-  const HORIZ_CENTER_Y = 100;
+  const HORIZ_INTERNAL_GAP = 32;
+  const HORIZ_STAGE_GAP = 68;
+  const HORIZ_CENTER_Y = 160;
   let horizCurrentX = 40;
 
   // Track output node IDs for each step to connect lineage to downstream stages
@@ -120,57 +116,33 @@ export function buildPipelineGraph(
       }
     }
 
-    // Determine output items
-    const outputItems = getStepOutputItems(step);
-    const isArrayOutput = outputItems !== null && outputItems.length > 0;
-    const outputCount = isArrayOutput ? outputItems.length : 1;
+    // Determine output items (render all items for complete pipeline visibility)
+    const rawOutputItems = getStepOutputItems(step);
+    const isArrayOutput = rawOutputItems !== null && rawOutputItems.length > 0;
+    const outputItems = isArrayOutput ? rawOutputItems : null;
+    const outputCount = outputItems !== null ? outputItems.length : 1;
 
-    // Calculate heights and positions
+    // Calculate heights and positions along the flat horizontal conveyor line
     const totalOutputHeight = outputCount * ESTIMATED_HEIGHT + (outputCount - 1) * ITEM_GAP_Y;
-    const stageHeight = Math.max(ESTIMATED_HEIGHT, totalOutputHeight);
 
-    let inputPos = { x: 0, y: 0 };
-    let stepPos = { x: 0, y: 0 };
+    const inputPos = { x: horizCurrentX, y: HORIZ_CENTER_Y };
+    const stepPos = { x: horizCurrentX + INPUT_WIDTH + HORIZ_INTERNAL_GAP, y: HORIZ_CENTER_Y };
+    const outputX = stepPos.x + STEP_WIDTH + HORIZ_INTERNAL_GAP;
     const outputPositions: { x: number; y: number }[] = [];
 
-    if (layoutMode === "rows") {
-      const centerY = currentStageY + (stageHeight - ESTIMATED_HEIGHT) / 2;
-      inputPos = { x: ROW_START_X, y: centerY };
-      stepPos = { x: ROW_START_X + INPUT_WIDTH + ROW_INTERNAL_GAP, y: centerY };
-      const outputX = stepPos.x + STEP_WIDTH + ROW_INTERNAL_GAP;
-
-      if (!isArrayOutput) {
-        outputPositions.push({ x: outputX, y: centerY });
-      } else {
-        for (let j = 0; j < outputCount; j++) {
-          outputPositions.push({
-            x: outputX,
-            y: currentStageY + j * (ESTIMATED_HEIGHT + ITEM_GAP_Y),
-          });
-        }
-      }
-
-      currentStageY += stageHeight + STAGE_ROW_GAP;
+    if (!isArrayOutput) {
+      outputPositions.push({ x: outputX, y: HORIZ_CENTER_Y });
     } else {
-      // Horizontal conveyor mode
-      inputPos = { x: horizCurrentX, y: HORIZ_CENTER_Y };
-      stepPos = { x: horizCurrentX + INPUT_WIDTH + HORIZ_INTERNAL_GAP, y: HORIZ_CENTER_Y };
-      const outputX = stepPos.x + STEP_WIDTH + HORIZ_INTERNAL_GAP;
-
-      if (!isArrayOutput) {
-        outputPositions.push({ x: outputX, y: HORIZ_CENTER_Y });
-      } else {
-        const startY = HORIZ_CENTER_Y + (ESTIMATED_HEIGHT - totalOutputHeight) / 2;
-        for (let j = 0; j < outputCount; j++) {
-          outputPositions.push({
-            x: outputX,
-            y: startY + j * (ESTIMATED_HEIGHT + ITEM_GAP_Y),
-          });
-        }
+      const startY = HORIZ_CENTER_Y + (ESTIMATED_HEIGHT - totalOutputHeight) / 2;
+      for (let j = 0; j < outputCount; j++) {
+        outputPositions.push({
+          x: outputX,
+          y: startY + j * (ESTIMATED_HEIGHT + ITEM_GAP_Y),
+        });
       }
-
-      horizCurrentX = outputX + OUTPUT_WIDTH + HORIZ_STAGE_GAP;
     }
+
+    horizCurrentX = outputX + OUTPUT_WIDTH + HORIZ_STAGE_GAP;
 
     // 1. INPUT NODE
     const inputNodeId = `in-${step.id}`;
@@ -351,26 +323,31 @@ export function buildPipelineGraph(
 
     stepOutputNodeIds[step.id] = currentStepOutputIds;
 
-    // EDGE 3: Connect Output(s) of Stage N -> Input of Stage N+1 (Pipeline lineage)
-    if (idx < steps.length - 1) {
+    // EDGE 3: Connect Output(s) of Stage N -> Input of Stage N+1 (Linear conveyor lineage)
+    // Note: Memory is isolated from the linear transformation conveyor;
+    // Memory context routes directly to Generation when Generation starts.
+    if (step.step_type !== "memory" && idx < steps.length - 1) {
       const nextStep = steps[idx + 1];
       const nextInputNodeId = `in-${nextStep.id}`;
 
-      if (layoutMode === "rows") {
-        // Lineage flows down from the last output node bottom handle to next Input left handle
-        const sourceNodeId = currentStepOutputIds[currentStepOutputIds.length - 1];
+      // Horizontal conveyor: output nodes connect into the next stage input
+      const middleIdx = Math.floor(currentStepOutputIds.length / 2);
+      currentStepOutputIds.forEach((outNodeId, outIdx) => {
+        const isMiddle = outIdx === middleIdx;
         edges.push({
-          id: `edge-lineage-${step.id}-to-${nextStep.id}`,
-          source: sourceNodeId,
+          id: `edge-lineage-${outNodeId}-to-${nextStep.id}`,
+          source: outNodeId,
           target: nextInputNodeId,
-          sourceHandle: "bottom",
+          sourceHandle: "right",
           targetHandle: "left",
           type: "smoothstep",
           animated: true,
-          label: "NEXT STAGE",
-          labelStyle: { fill: strokeActive, fontSize: 9, fontFamily: "monospace", fontWeight: 700 },
-          labelBgStyle: { fill: cardBg, fillOpacity: 0.95 },
-          labelBgPadding: [4, 2] as [number, number],
+          label: isMiddle ? "NEXT STAGE" : undefined,
+          labelStyle: isMiddle
+            ? { fill: strokeActive, fontSize: 9, fontFamily: "monospace", fontWeight: 700 }
+            : undefined,
+          labelBgStyle: isMiddle ? { fill: cardBg, fillOpacity: 0.95 } : undefined,
+          labelBgPadding: isMiddle ? ([4, 2] as [number, number]) : undefined,
           style: {
             stroke: strokeActive,
             strokeWidth: 2,
@@ -381,39 +358,48 @@ export function buildPipelineGraph(
             color: strokeActive,
           },
         });
-      } else {
-        // Horizontal conveyor: all output nodes connect into the next stage input
-        const middleIdx = Math.floor(currentStepOutputIds.length / 2);
-        currentStepOutputIds.forEach((outNodeId, outIdx) => {
-          const isMiddle = outIdx === middleIdx;
-          edges.push({
-            id: `edge-lineage-${outNodeId}-to-${nextStep.id}`,
-            source: outNodeId,
-            target: nextInputNodeId,
-            sourceHandle: "right",
-            targetHandle: "left",
-            type: "smoothstep",
-            animated: true,
-            label: isMiddle ? "NEXT STAGE" : undefined,
-            labelStyle: isMiddle
-              ? { fill: strokeActive, fontSize: 9, fontFamily: "monospace", fontWeight: 700 }
-              : undefined,
-            labelBgStyle: isMiddle ? { fill: cardBg, fillOpacity: 0.95 } : undefined,
-            labelBgPadding: isMiddle ? ([4, 2] as [number, number]) : undefined,
-            style: {
-              stroke: strokeActive,
-              strokeWidth: 2,
-              strokeDasharray: "4 4",
-            },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: strokeActive,
-            },
-          });
-        });
-      }
+      });
     }
   });
+
+  // Memory -> Generation direct connector:
+  // Memory is the first node; it connects directly to Generation when generation starts.
+  const memoryStep = steps.find((s) => s.step_type === "memory");
+  const generationStep = steps.find((s) => s.step_type === "generation");
+
+  if (memoryStep && generationStep) {
+    const isGenerationStarted =
+      generationStep.status === "running" || generationStep.status === "completed";
+
+    if (isGenerationStarted) {
+      const memoryOutIds = stepOutputNodeIds[memoryStep.id] || [];
+      const memorySourceId = memoryOutIds[0] || `step-${memoryStep.id}`;
+      const generationTargetId = `in-${generationStep.id}`;
+
+      edges.push({
+        id: `edge-memory-to-generation`,
+        source: memorySourceId,
+        target: generationTargetId,
+        sourceHandle: "top",
+        targetHandle: "top",
+        type: "smoothstep",
+        animated: true,
+        label: "MEMORY CONTEXT",
+        labelStyle: { fill: strokeActive, fontSize: 9, fontFamily: "monospace", fontWeight: 800 },
+        labelBgStyle: { fill: cardBg, fillOpacity: 0.95 },
+        labelBgPadding: [6, 3] as [number, number],
+        style: {
+          stroke: strokeActive,
+          strokeWidth: 2.5,
+          strokeDasharray: "5 5",
+        },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: strokeActive,
+        },
+      });
+    }
+  }
 
   return { nodes, edges };
 }

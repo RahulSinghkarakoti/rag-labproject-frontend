@@ -99,6 +99,48 @@ function RuntimeLoading({ error, onRetry }: { error: string | null; onRetry: () 
   );
 }
 
+function extractMessageContent(msg: unknown): string {
+  if (!msg || typeof msg !== "object") return "";
+  const message = msg as { content?: unknown };
+  if (typeof message.content === "string") return message.content;
+  if (Array.isArray(message.content)) {
+    return message.content
+      .map((part) => {
+        if (!part) return "";
+        if (typeof part === "string") return part;
+        if (typeof part === "object" && "text" in part && typeof part.text === "string") {
+          return part.text;
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+  return "";
+}
+
+function extractFollowupSuggestions(text: string): string[] {
+  if (!text) return [];
+  const markerRegex = /(?:^|\r?\n)(?:#{1,4}\s*|\*\*|__)?(?:Suggested Follow-?ups?|Follow-?up Questions)(?:[:\*\*__\s]*)\r?\n([\s\S]*)$/i;
+  const match = markerRegex.exec(text);
+  if (!match) return [];
+  const followupsBlock = match[1];
+  const lines = followupsBlock.split(/\r?\n/);
+  const suggestions: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const itemMatch = trimmed.match(/^(?:\d+[\.\)]|[-*•])\s+(.+)$/);
+    if (itemMatch) {
+      let cleaned = itemMatch[1].trim();
+      cleaned = cleaned.replace(/^[\*"'\s]+|[\*"'\s]+$/g, "").trim();
+      if (cleaned.length > 5 && cleaned.length < 250) {
+        suggestions.push(cleaned);
+      }
+    }
+  }
+  return suggestions;
+}
+
 export function MyRuntimeProvider({
   children,
   threadId,
@@ -414,6 +456,18 @@ function RuntimeInner({
       history: {
         load: async () => history,
         append: async () => {},
+      },
+      suggestion: {
+        generate: async ({ messages: threadMsgs }) => {
+          const lastAssistant = [...threadMsgs].reverse().find((m) => m.role === "assistant");
+          if (!lastAssistant) return [];
+          const text = extractMessageContent(lastAssistant);
+          const followups = extractFollowupSuggestions(text);
+          return followups.map((prompt) => ({
+            prompt,
+            title: prompt,
+          }));
+        },
       },
     },
   });

@@ -79,7 +79,7 @@ const AttachmentPreviewDialog: FC<PropsWithChildren> = ({ children }) => {
           <button type="button">{children}</button>
         )}
       </DialogTrigger>
-      <DialogContent className="aui-attachment-preview-dialog-content bg-card border border-border font-mono p-2 sm:max-w-3xl">
+      <DialogContent className="aui-attachment-preview-dialog-content sm:max-w-3xl p-2">
         <DialogTitle className="aui-sr-only sr-only">
           Image Attachment Preview
         </DialogTitle>

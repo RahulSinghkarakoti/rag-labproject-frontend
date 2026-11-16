@@ -16,17 +16,32 @@ let cachedSessionExpiry = 0;
 
 export async function getCachedSession(forceRefresh = false) {
   if (!forceRefresh && cachedSession && Date.now() < cachedSessionExpiry) {
-    return cachedSession;
+    const expires = cachedSession?.accessTokenExpires
+      ? Number(cachedSession.accessTokenExpires)
+      : 0;
+    // Only return cached session if the token is not expiring in the next 30s
+    if (!expires || Date.now() < expires - 30000) {
+      return cachedSession;
+    }
   }
   cachedSession = await getSession();
   cachedSessionExpiry = Date.now() + 60000; // cache for 1 minute
   return cachedSession;
 }
 
+export async function ensureValidAccessToken(): Promise<string | undefined> {
+  let session = await getCachedSession();
+  const expires = session?.accessTokenExpires ? Number(session.accessTokenExpires) : 0;
+  if (!session?.accessToken || (expires && Date.now() >= expires - 30000)) {
+    session = await getCachedSession(true);
+  }
+  return session?.accessToken;
+}
+
 const rawBaseURL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
 const baseURL = rawBaseURL.replace(/\/+$/, "");
 
-const client = axios.create({
+export const client = axios.create({
   baseURL,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
@@ -46,7 +61,7 @@ async function forceLogin() {
   }
 }
 
-function refreshSession() {
+export function refreshSession() {
   refreshPromise ??= fetch("/api/auth/refresh", { method: "POST" })
     .then(async (response) => {
       const payload = await response.json().catch(() => null);

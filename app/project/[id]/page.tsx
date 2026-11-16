@@ -28,7 +28,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const chatEnabled = Boolean(selectedThreadId);
   const readyKbs = knowledgeBases.filter((kb) => kb.document_count > 0);
   const canCreateThread = readyKbs.length > 0;
-  const canShowSettings = leftTab === "threads" && Boolean(selectedThreadId);
+  const canShowSettings = Boolean(selectedThreadId);
   const isSettingsPanelVisible = canShowSettings && rightPanelVisible;
 
   useEffect(() => {

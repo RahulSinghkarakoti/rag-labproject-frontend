@@ -17,7 +17,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import { buildPipelineGraph, type FlowchartLayoutMode } from "./graph-builder";
+import { buildPipelineGraph } from "./graph-builder";
 import { useThemeAccent } from "@/components/theme-accent-provider";
 import { StepProcessNode } from "./nodes/step-process-node";
 import { DataArtifactNode } from "./nodes/data-artifact-node";
@@ -33,8 +33,6 @@ import {
   Minimize2,
   Scan,
   X,
-  LayoutGrid,
-  Workflow,
   Sparkles,
   Database,
   Filter,
@@ -75,7 +73,6 @@ function FlowchartCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { activePreset } = useThemeAccent();
-  const [layoutMode, setLayoutMode] = useState<FlowchartLayoutMode>("horizontal");
   const [selectedTarget, setSelectedTarget] = useState<SelectedNodeTarget | null>(() =>
     activeStepId ? { type: "step", stepId: activeStepId } : null
   );
@@ -96,9 +93,9 @@ function FlowchartCanvas({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  // Rebuild graph when details, selection, layout, or theme changes
+  // Rebuild graph when details, selection, or theme changes
   useEffect(() => {
-    const graph = buildPipelineGraph(runDetails, selectedTarget, layoutMode, {
+    const graph = buildPipelineGraph(runDetails, selectedTarget, {
       border: activePreset.border,
       accent: activePreset.accent,
       card: activePreset.surface,
@@ -106,9 +103,9 @@ function FlowchartCanvas({
     });
     setNodes(graph.nodes);
     setEdges(graph.edges);
-  }, [runDetails, selectedTarget, layoutMode, activePreset, setNodes, setEdges]);
+  }, [runDetails, selectedTarget, activePreset, setNodes, setEdges]);
 
-  // Auto-fit whenever nodes initialize, layout changes, or fullscreen toggles
+  // Auto-fit whenever nodes initialize or fullscreen toggles
   useEffect(() => {
     if (nodesInitialized && nodes.length > 0) {
       const timer = setTimeout(() => {
@@ -116,7 +113,7 @@ function FlowchartCanvas({
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [nodesInitialized, layoutMode, isFullscreen, fitView, nodes.length]);
+  }, [nodesInitialized, isFullscreen, fitView, nodes.length]);
 
   // Auto-fit when inspector is toggled open/closed
   const handleToggleInspector = (open: boolean) => {
@@ -206,36 +203,6 @@ function FlowchartCanvas({
       <div ref={containerRef} className="flex-1 relative h-full min-h-[400px] w-full overflow-hidden">
         {/* Canvas Top Toolbar */}
         <div className="absolute top-2.5 left-2.5 z-10 flex flex-wrap items-center gap-1.5 p-1 bg-card/95 backdrop-blur border border-border text-xs cyber-chamfer-sm shadow-md">
-          {/* Layout Mode Segmented Switcher */}
-          <div className="flex items-center gap-0.5 p-0.5 bg-background border border-border cyber-chamfer-sm">
-            <button
-              onClick={() => setLayoutMode("horizontal")}
-              className={cn(
-                "px-2 py-0.5 text-[10px] font-bold uppercase cyber-chamfer-sm flex items-center gap-1 transition-colors",
-                layoutMode === "horizontal"
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-              )}
-              title="Pipeline Layout: All stages in one continuous horizontal conveyor line (Default)"
-            >
-              <Workflow className="h-3 w-3" />
-              <span>Pipeline</span>
-            </button>
-            <button
-              onClick={() => setLayoutMode("rows")}
-              className={cn(
-                "px-2 py-0.5 text-[10px] font-bold uppercase cyber-chamfer-sm flex items-center gap-1 transition-colors",
-                layoutMode === "rows"
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-              )}
-              title="Rows Layout: Each pipeline stage stacked on its own row"
-            >
-              <LayoutGrid className="h-3 w-3" />
-              <span>Rows</span>
-            </button>
-          </div>
-
           {/* Fit View Button */}
           <button
             onClick={handleFitAll}

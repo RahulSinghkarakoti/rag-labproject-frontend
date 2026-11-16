@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -103,19 +104,19 @@ export function ThreadPanel({ projectId, canCreate = true }: { projectId: string
         {error ? <p className="px-2 py-2 text-[10px] text-destructive uppercase">{error}</p> : null}
       </div>
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="uppercase tracking-wider text-accent text-base">&gt; INITIALIZE_THREAD</DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">Specify thread label and select target knowledge bases.</DialogDescription>
+            <DialogTitle className="text-accent">&gt; INITIALIZE_THREAD</DialogTitle>
+            <DialogDescription>Specify thread label and select target knowledge bases.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2 font-mono">
+          <DialogBody className="space-y-3">
             <div className="space-y-1.5">
               <label htmlFor="thread-name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Thread Title</label>
-              <Input id="thread-name" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. CORE_QUERY_SESSION" autoFocus />
+              <Input id="thread-name" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. CORE_QUERY_SESSION" autoFocus className="h-8 text-xs" />
             </div>
             <div className="space-y-1.5">
               <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Select Knowledge Bases</p>
-              <div className="max-h-52 space-y-2 overflow-y-auto cyber-chamfer-sm border border-border bg-background p-3">
+              <div className="max-h-48 space-y-2 overflow-y-auto cyber-chamfer-sm border border-border bg-background p-2.5">
                 {availableKnowledgeBases.map((kb) => (
                   <label key={kb.id} className="flex cursor-pointer items-center gap-2 text-xs font-bold uppercase text-foreground">
                     <input
@@ -131,10 +132,10 @@ export function ThreadPanel({ projectId, canCreate = true }: { projectId: string
                 {!availableKnowledgeBases.length ? <p className="text-[10px] text-muted-foreground uppercase">NO_AVAILABLE_KNOWLEDGE_BASES</p> : null}
               </div>
             </div>
-          </div>
+          </DialogBody>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>CANCEL</Button>
-            <Button onClick={() => void addThread()} disabled={!title.trim() || selectedKbIds.length === 0 || status === "saving"}>INITIALIZE</Button>
+            <Button variant="outline" size="sm" onClick={() => setIsCreateOpen(false)}>CANCEL</Button>
+            <Button size="sm" onClick={() => void addThread()} disabled={!title.trim() || selectedKbIds.length === 0 || status === "saving"}>INITIALIZE</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -147,30 +148,33 @@ export function ThreadPanel({ projectId, canCreate = true }: { projectId: string
           }
         }}
       >
-        <DialogContent className="border-border bg-card font-mono text-foreground sm:max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="uppercase tracking-wider text-destructive text-base flex items-center gap-2">
+            <DialogTitle className="text-destructive flex items-center gap-2">
               <Trash2 className="size-4 text-destructive" />
               &gt; CONFIRM_DELETE_THREAD
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
+            <DialogDescription>
               Are you sure you want to permanently delete this thread? All conversation messages, runs, and sessions within this thread will be purged.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="my-2 p-3 cyber-chamfer-sm border border-destructive/30 bg-destructive/5 space-y-1">
-            <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">TARGET_THREAD:</p>
-            <p className="text-xs font-bold text-foreground truncate">{threadToDelete?.title || "UNTITLED_THREAD"}</p>
-            <p className="text-[10px] text-muted-foreground font-mono truncate">{threadToDelete?.id}</p>
-          </div>
+          <DialogBody className="space-y-3">
+            <div className="p-2.5 cyber-chamfer-sm border border-destructive/30 bg-destructive/5 space-y-1">
+              <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">TARGET_THREAD:</p>
+              <p className="text-xs font-bold text-foreground truncate">{threadToDelete?.title || "UNTITLED_THREAD"}</p>
+              <p className="text-[10px] text-muted-foreground font-mono truncate">{threadToDelete?.id}</p>
+            </div>
 
-          {deleteError ? (
-            <p className="text-xs text-destructive font-mono uppercase">&gt; ERROR: {deleteError}</p>
-          ) : null}
+            {deleteError ? (
+              <p className="text-xs text-destructive font-mono uppercase">&gt; ERROR: {deleteError}</p>
+            ) : null}
+          </DialogBody>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter>
             <Button
               variant="outline"
+              size="sm"
               onClick={() => {
                 setThreadToDelete(null);
                 setDeleteError(null);
@@ -181,6 +185,7 @@ export function ThreadPanel({ projectId, canCreate = true }: { projectId: string
             </Button>
             <Button
               variant="destructive"
+              size="sm"
               onClick={() => void handleConfirmDelete()}
               disabled={isDeleting}
               className="font-bold uppercase tracking-wider"

@@ -3,12 +3,9 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import {
   AlertCircle,
-  CheckSquare,
-  FileText,
   FolderOpen,
   Loader2,
   Plus,
-  Square,
   Trash2,
   UploadCloud,
 } from "lucide-react";
@@ -32,6 +29,9 @@ function formatBytes(bytes?: number | null): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
+const ACCEPTED_EXTENSIONS = [".pdf", ".txt", ".text", ".md", ".markdown", ".csv"];
+const ACCEPT_FILE_TYPES = ".pdf,.txt,.text,.md,.markdown,.csv,application/pdf,text/plain,text/csv,text/markdown";
+
 export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCreateKbOpen, setIsCreateKbOpen] = useState(false);
@@ -48,17 +48,12 @@ export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) 
   );
   const documentsRef = useRef(documents);
   documentsRef.current = documents;
-  const selectedDocumentIds = useDocumentStore((state) =>
-    Array.isArray(state?.selectedDocumentIds) ? state.selectedDocumentIds : []
-  );
   const docStatus = useDocumentStore((state) => state.status);
   const docError = useDocumentStore((state) => state.error);
   const fetchDocuments = useDocumentStore((state) => state.fetchDocuments);
   const uploadDocuments = useDocumentStore((state) => state.uploadDocuments);
   const deleteDocument = useDocumentStore((state) => state.deleteDocument);
   const applySSEStatusUpdate = useDocumentStore((state) => state.applySSEStatusUpdate);
-  const toggleSelectDocument = useDocumentStore((state) => state.toggleSelectDocument);
-  const selectAllDocuments = useDocumentStore((state) => state.selectAllDocuments);
 
   const eventNames = useMemo(
     () => ["ingestion_status"],
@@ -134,12 +129,38 @@ export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) 
   }, [projectId, selectedKbId, knowledgeBases, fetchDocuments]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0 || !selectedKbId) return;
+    const rawFiles = event.target.files;
+    if (!rawFiles || rawFiles.length === 0 || !selectedKbId) return;
+
+    const allFiles = Array.from(rawFiles);
+    const validFiles: File[] = [];
+    const invalidFiles: string[] = [];
+
+    for (const file of allFiles) {
+      const dotIndex = file.name.lastIndexOf(".");
+      const ext = dotIndex !== -1 ? file.name.slice(dotIndex).toLowerCase() : "";
+      if (ACCEPTED_EXTENSIONS.includes(ext)) {
+        validFiles.push(file);
+      } else {
+        invalidFiles.push(file.name);
+      }
+    }
+
+    if (invalidFiles.length > 0) {
+      useDocumentStore.setState({
+        error: `Unsupported file type: ${invalidFiles.join(", ")}. Accepted formats: .pdf, .txt, .md, .csv`,
+      });
+      if (validFiles.length === 0) {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        return;
+      }
+    }
 
     try {
       reconnectSse();
-      const uploadedDocuments = await uploadDocuments(projectId, selectedKbId, Array.from(files));
+      const uploadedDocuments = await uploadDocuments(projectId, selectedKbId, validFiles);
       for (const document of uploadedDocuments) trackedDocumentIdsRef.current.add(document.id);
       const refreshedDocuments = await fetchDocuments(projectId, selectedKbId);
       for (const document of refreshedDocuments) {
@@ -155,9 +176,6 @@ export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) 
     }
   };
 
-  const readyDocuments = documents.filter((doc) => isDocumentReady(doc.status));
-  const isAllSelected =
-    readyDocuments.length > 0 && selectedDocumentIds.length === readyDocuments.length;
   const isUploading = docStatus === "uploading";
 
   return (
@@ -182,23 +200,8 @@ export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) 
       {/* Sources & Controls Bar */}
       <div className="flex items-center justify-between border-b border-[#2a2a3a] px-4 py-2.5 bg-[#0a0a0f]">
         <div className="flex items-center gap-2">
-          {documents.length > 0 && (
-            <button
-              type="button"
-              onClick={() => selectAllDocuments(!isAllSelected)}
-              className="text-muted-foreground hover:text-accent transition-none"
-              title={isAllSelected ? "Deselect all" : "Select all sources"}
-            >
-              {isAllSelected ? (
-                <CheckSquare className="size-3.5 text-accent" />
-              ) : (
-                <Square className="size-3.5" />
-              )}
-            </button>
-          )}
           <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
             SOURCES [{documents.length}]
-            {documents.length > 0 && ` (${selectedDocumentIds.length} ACTIVE)`}
           </span>
         </div>
 
@@ -206,6 +209,7 @@ export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) 
           ref={fileInputRef}
           type="file"
           multiple
+          accept={ACCEPT_FILE_TYPES}
           className="hidden"
           onChange={handleFileUpload}
         />
@@ -266,7 +270,7 @@ export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) 
             </div>
             <p className="text-xs font-bold uppercase tracking-wider text-foreground">NO DOCUMENTS INDEXED</p>
             <p className="mt-1 text-[10px] text-muted-foreground max-w-50">
-              Upload PDF, MD, TXT, or source files.
+              Upload PDF, TXT, MD, or CSV files.
             </p>
             <Button
               variant="outline"
@@ -281,7 +285,6 @@ export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) 
           <div className="space-y-2">
             {documents.map((doc) => {
               const isReady = isDocumentReady(doc.status);
-              const isSelected = selectedDocumentIds.includes(doc.id);
               const extension = doc.name.split(".").pop()?.toUpperCase() ?? "DOC";
               const normalizedStatus = doc.status?.toLowerCase();
               const statusClass =
@@ -296,31 +299,12 @@ export function DocumentsPanel({ projectId, projectName }: DocumentsPanelProps) 
               return (
                 <div
                   key={doc.id}
-                  className={`group flex items-center gap-2.5 cyber-chamfer-sm border px-2.5 py-2 transition-none ${isSelected
-                      ? "border-accent bg-[#12121a]"
-                      : "border-[#2a2a3a] bg-[#0a0a0f] opacity-60 hover:opacity-100 hover:border-accent/50"
-                    } ${!isReady ? "opacity-75" : ""}`}
+                  className={`group flex items-center gap-2.5 cyber-chamfer-sm border px-2.5 py-2 transition-none ${
+                    isReady
+                      ? "border-[#2a2a3a] bg-[#12121a] hover:border-accent/50"
+                      : "border-[#2a2a3a] bg-[#0a0a0f] opacity-75"
+                  }`}
                 >
-                  <button
-                    type="button"
-                    onClick={() => toggleSelectDocument(doc.id)}
-                    disabled={!isReady}
-                    className="text-muted-foreground hover:text-accent transition-none shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
-                    title={
-                      !isReady
-                        ? `${doc.status ?? "Processing"} — wait until document is ready`
-                        : isSelected
-                          ? "Exclude from RAG query context"
-                          : "Include in RAG query context"
-                    }
-                  >
-                    {isSelected ? (
-                      <CheckSquare className="size-3.5 text-accent" />
-                    ) : (
-                      <Square className="size-3.5" />
-                    )}
-                  </button>
-
                   <div className="flex size-7 shrink-0 items-center justify-center cyber-chamfer-sm border border-[#2a2a3a] bg-[#1c1c2e] text-[9px] font-black text-accent">
                     {extension.slice(0, 3)}
                   </div>

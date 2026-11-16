@@ -3,7 +3,9 @@
 import { useState } from "react";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -48,22 +50,24 @@ export function ThemeOptionsDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className="max-w-2xl bg-card border-border text-foreground font-mono p-0 overflow-hidden shadow-2xl">
+      <DialogContent className="max-w-2xl sm:max-w-2xl">
         {/* Compact Dense Header */}
-        <div className="border-b border-border bg-secondary/40 px-3.5 py-2.5 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Terminal className="size-3.5 text-accent animate-pulse" />
-            <DialogTitle className="text-xs font-bold uppercase tracking-wider text-foreground">
-              [ TERMINAL PROFILES ]
-            </DialogTitle>
+        <DialogHeader>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Terminal className="size-3.5 text-accent animate-pulse" />
+              <DialogTitle>
+                [ TERMINAL PROFILES ]
+              </DialogTitle>
+            </div>
+            <span className="text-[9px] text-muted-foreground uppercase border border-border px-1.5 py-0.5 cyber-chamfer-sm">
+              {presets.length} CURATED TUIS
+            </span>
           </div>
-          <span className="text-[9px] text-muted-foreground uppercase border border-border px-1.5 py-0.5">
-            {presets.length} CURATED TUIS
-          </span>
-        </div>
+        </DialogHeader>
 
         {/* Dense Grid: Only Theme Name & Rich Immune Preview */}
-        <div className="p-3 max-h-[78vh] overflow-y-auto">
+        <DialogBody className="p-3 space-y-0">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {presets.map((preset) => {
               const isActive = activePresetId === preset.id;
@@ -175,21 +179,21 @@ export function ThemeOptionsDialog({
               );
             })}
           </div>
-        </div>
+        </DialogBody>
 
         {/* Compact Footer */}
-        <div className="border-t border-border bg-secondary/20 px-3 py-1.5 flex items-center justify-between text-[10px]">
-          <span className="text-muted-foreground text-[9px] truncate">
+        <DialogFooter className="justify-between sm:justify-between px-3 py-2 text-[10px]">
+          <span className="text-muted-foreground text-[10px] uppercase truncate font-bold">
             ACTIVE // {presets.find((p) => p.id === activePresetId)?.name}
           </span>
           <button
             type="button"
             onClick={() => setIsOpen(false)}
-            className="px-2.5 py-0.5 bg-accent text-accent-foreground font-bold uppercase text-[10px] hover:opacity-90 cyber-chamfer-sm transition-opacity"
+            className="px-3 py-1 bg-accent text-accent-foreground font-bold uppercase text-xs hover:opacity-90 cyber-chamfer-sm transition-opacity cursor-pointer"
           >
-            [ CLOSE ]
+            [ DONE ]
           </button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

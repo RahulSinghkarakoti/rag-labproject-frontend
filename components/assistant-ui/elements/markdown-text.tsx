@@ -1,14 +1,19 @@
 "use client";
 
 import "@assistant-ui/react-markdown/styles/dot.css";
+import "katex/dist/katex.min.css";
 
 import {
   type CodeHeaderProps,
   MarkdownTextPrimitive,
   unstable_memoizeMarkdownComponents as memoizeMarkdownComponents,
   useIsMarkdownCodeBlock,
+  normalizeMathDelimiters,
+  escapeCurrencyDollars,
 } from "@assistant-ui/react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import { type FC, memo, useMemo, useRef } from "react";
 import { useAuiState, type TextMessagePartProps } from "@assistant-ui/react";
 import { CheckIcon, CopyIcon, FileIcon } from "lucide-react";
@@ -22,13 +27,25 @@ type MarkdownTextProps = Partial<TextMessagePartProps> & {
 };
 
 const preprocessMarkdown = (text: string) => {
-  const normalized = text
+  // 1. Normalize LaTeX delimiters (\[ \] -> multiline $$, \( \) -> $) and protect currency symbols
+  const mathNormalized = escapeCurrencyDollars(normalizeMathDelimiters(text));
+
+  // 2. Ensure list items running into previous text have proper newlines
+  const listNormalized = mathNormalized
     .replace(/([^\n])\s+([-*])\s+(?=\*\*)/g, "$1\n$2 ")
     .replace(/([^\n])\s+(\d+\.)\s+(?=\*\*)/g, "$1\n$2 ");
-  return normalized.replace(
-  /\[([^[\]]+\.(?:md|csv|pdf|txt))\]/g,
-  (_, filename) => `[${filename}](#citation-${filename})`
-);
+
+  // 3. Transform [filename.pdf] citations to anchor tags
+  const citationNormalized = listNormalized.replace(
+    /\[([^[\]]+\.(?:md|csv|pdf|txt))\]/g,
+    (_, filename) => `[${filename}](#citation-${filename})`
+  );
+
+  // 4. Strip trailing suggested followups section (rendered interactively as chips above composer)
+  return citationNormalized.replace(
+    /(?:\r?\n)+(?:#{1,4}\s*|\*\*|__)?(?:Suggested Follow-?ups?|Follow-?up Questions)(?:[:\*\*__\s]*)\r?\n[\s\S]*$/i,
+    ""
+  );
 };
 
 const useShallowStable = <T extends Record<string, unknown> | undefined>(
@@ -59,7 +76,8 @@ const MarkdownTextImpl: FC<MarkdownTextProps> = ({ components }) => {
 
   return (
     <MarkdownTextPrimitive
-      remarkPlugins={[remarkGfm]}
+      remarkPlugins={[remarkGfm, remarkMath]}
+      rehypePlugins={[[rehypeKatex, { throwOnError: false }]]}
       preprocess={preprocessMarkdown}
       className="aui-md text-xs font-mono"
       components={markdownComponents}
@@ -128,6 +146,12 @@ const defaultComponents = memoizeMarkdownComponents({
         "aui-md-p my-2.5 leading-relaxed first:mt-0 last:mb-0 text-foreground font-mono text-xs",
         className,
       )}
+      {...props}
+    />
+  ),
+  hr: ({ className, ...props }) => (
+    <hr
+      className={cn("aui-md-hr my-4 border-[#2a2a3a]", className)}
       {...props}
     />
   ),

@@ -445,3 +445,19 @@ body {
 .react-flow__edge-textbg {
   fill: var(--card) !important;
 }
+
+/* =========================================================================
+   KaTeX Formula Styling & Math Container
+   ========================================================================= */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.6rem 0.2rem;
+  margin: 0.75rem 0 !important;
+  scrollbar-width: thin;
+}
+
+.katex {
+  color: inherit;
+  font-size: 1.05em;
+}

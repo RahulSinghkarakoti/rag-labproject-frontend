@@ -105,11 +105,15 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
             if (trigger === "update") {
                 return refreshAccessToken(token);
             }
-            /* * ACCESS TOKEN STILL VALID*/
-            if (token.accessTokenExpires && Date.now() < Number(token.accessTokenExpires)) {
+            /* * ACCESS TOKEN STILL VALID (with 2-minute proactive buffer) */
+            const REFRESH_BUFFER_MS = 2 * 60 * 1000;
+            if (
+                token.accessTokenExpires &&
+                Date.now() < Number(token.accessTokenExpires) - REFRESH_BUFFER_MS
+            ) {
                 return token;
             }
-            /* * ACCESS TOKEN EXPIRED*/
+            /* * ACCESS TOKEN EXPIRED OR EXPIRING SOON */
             return refreshAccessToken(token);
         },
         async session({ session, token }) {
@@ -160,58 +164,88 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
 
 
 
+const inFlightRefreshes = new Map<string, Promise<any>>();
+
 async function refreshAccessToken(token: any) {
-    try {
-        if (!token.refreshToken) {
-            console.error("❌ No refresh token available");
-            return {
-                ...token,
-                error: "NoRefreshToken",
-            };
-        }
-
-        const response = await fetch(`${NEXT_PUBLIC_API_BASE_URL}/auth/refresh`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-Internal-Auth": process.env.FASTAPI_AUTH_SECRET!,
-            },
-            body: JSON.stringify({
-                refresh_token: token.refreshToken,
-            }),
-        });
-
-        if (!response.ok) {
-            return {
-                ...token,
-                error: "RefreshAccessTokenError",
-            };
-        }
-
-        const parsedResponse = await response.json();
-        // Backend wraps payload in APIResponse { data: AuthResponse }
-        const data = parsedResponse.data ?? parsedResponse;
-
-        if (!data?.access_token) {
-            return {
-                ...token,
-                error: "RefreshAccessTokenError",
-            };
-        }
-
+    if (!token?.refreshToken) {
+        console.error("❌ No refresh token available");
         return {
             ...token,
-            accessToken: data.access_token,
-            refreshToken: data.refresh_token ?? token.refreshToken,
-            accessTokenExpires: Date.now() + 15 * 60 * 1000,
-            user: data.user ?? token.user,
-            error: undefined,
-        };
-    } catch (error) {
-        console.error("Refresh token error:", error);
-        return {
-            ...token,
-            error: "RefreshAccessTokenError",
+            error: "NoRefreshToken",
         };
     }
+
+    const cacheKey = String(token.refreshToken);
+    const existing = inFlightRefreshes.get(cacheKey);
+    if (existing) {
+        return existing;
+    }
+
+    const refreshPromise = (async () => {
+        try {
+            const response = await fetch(`${NEXT_PUBLIC_API_BASE_URL}/auth/refresh`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Internal-Auth": process.env.FASTAPI_AUTH_SECRET!,
+                },
+                body: JSON.stringify({
+                    refresh_token: token.refreshToken,
+                }),
+            });
+
+            if (!response.ok) {
+                // If refresh call failed but access token is still valid by clock,
+                // keep current session alive rather than kicking user out immediately.
+                const isStillValid =
+                    token.accessTokenExpires && Date.now() < Number(token.accessTokenExpires);
+                if (isStillValid) {
+                    console.warn(
+                        "⚠️ Refresh request failed but access token still valid; retaining current token"
+                    );
+                    return token;
+                }
+                return {
+                    ...token,
+                    error: "RefreshAccessTokenError",
+                };
+            }
+
+            const parsedResponse = await response.json();
+            // Backend wraps payload in APIResponse { data: AuthResponse }
+            const data = parsedResponse.data ?? parsedResponse;
+
+            if (!data?.access_token) {
+                return {
+                    ...token,
+                    error: "RefreshAccessTokenError",
+                };
+            }
+
+            return {
+                ...token,
+                accessToken: data.access_token,
+                refreshToken: data.refresh_token ?? token.refreshToken,
+                accessTokenExpires: Date.now() + 15 * 60 * 1000,
+                user: data.user ?? token.user,
+                error: undefined,
+            };
+        } catch (error) {
+            console.error("Refresh token network error:", error);
+            const isStillValid =
+                token.accessTokenExpires && Date.now() < Number(token.accessTokenExpires);
+            if (isStillValid) {
+                return token;
+            }
+            return {
+                ...token,
+                error: "RefreshAccessTokenError",
+            };
+        } finally {
+            inFlightRefreshes.delete(cacheKey);
+        }
+    })();
+
+    inFlightRefreshes.set(cacheKey, refreshPromise);
+    return refreshPromise;
 }
